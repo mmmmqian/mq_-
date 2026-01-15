@@ -383,13 +383,41 @@ export const MOCK_INFERENCE_SERVICES: InferenceService[] = [
     status: 'running',
     replicas: { ready: 4, total: 4 },
     endpoint: 'https://llama3.api.ai-nex.io/v1',
+    basePath: '/v1',
+    healthPath: '/healthz',
     protocol: 'HTTP',
     cpu: '16c',
     memory: '64G',
     gpu: '4x A100 (80G)',
     owner: 'zhangsan',
     createdAt: '2024-05-20 10:00',
-    uptime: '4d 22h'
+    uptime: '4d 22h',
+    qps: 1420,
+    latency: 124,
+    nodeName: 'szx-node-001',
+    image: 'ai-nex.repo.io/inference/vllm:0.4.2-llama3'
+  },
+  {
+    id: 'SVC-8842-B',
+    name: 'bert-ner-api',
+    modelName: 'bert-base-chinese',
+    modelVersion: 'v2.1.0',
+    status: 'running',
+    replicas: { ready: 2, total: 2 },
+    endpoint: 'https://bert.api.ai-nex.io/v1',
+    basePath: '/v1',
+    healthPath: '/status',
+    protocol: 'HTTP',
+    cpu: '4c',
+    memory: '16G',
+    gpu: '1x T4 (16G)',
+    owner: 'lisi',
+    createdAt: '2024-05-22 14:15',
+    uptime: '2d 08h',
+    qps: 450,
+    latency: 12,
+    nodeName: 'szx-node-005',
+    image: 'ai-nex.repo.io/inference/triton:23.10-py3'
   }
 ];
 
@@ -416,7 +444,7 @@ export const MOCK_CLUSTERS: any[] = [
     registeredAt: '2023-10-15 10:00:00',
     lastSync: '2024-05-24 10:15:00',
     certExpiry: '2025-10-15',
-    apiUrl: 'https://k8s.szx.ai-nex.io:6443',
+    apiUrl: 'https://k8s.szx.api.ai-nex.io:6443',
     containerRuntime: 'containerd://1.7.0',
     networkPlugin: 'Calico / Cilium',
     resources: {

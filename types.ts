@@ -166,4 +166,10 @@ export interface InferenceService {
   owner: string;
   createdAt: string;
   uptime: string;
+  qps?: number;
+  latency?: number;
+  basePath?: string;
+  healthPath?: string;
+  nodeName?: string;
+  image?: string;
 }
