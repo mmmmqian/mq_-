@@ -2,13 +2,16 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Drawer } from '../ui/Drawer';
 import { 
-  Terminal, Code, Box, Cpu, Zap, Database, 
+  Terminal, Box, Cpu, Zap, Database, 
   Save, ChevronRight, CheckCircle2, Layout, 
   Monitor, Info, ShieldCheck, HardDrive, Settings,
   ArrowRight, Search, List, Rocket, Layers,
   ChevronLeft, AlertCircle, ShieldAlert,
   Gauge, Activity, Brain, HardDriveIcon,
-  ChevronDown, AlertTriangle, Clock
+  ChevronDown, AlertTriangle, Clock, SearchIcon,
+  Check,
+  // Added missing Code import
+  Code
 } from 'lucide-react';
 import { Badge } from '../ui/Badge';
 import { IDE_RESOURCE_BUNDLES, MOCK_USER_MODELS } from '../../constants';
@@ -21,6 +24,7 @@ interface CreateIDEModalProps {
 export const CreateIDEModal: React.FC<CreateIDEModalProps> = ({ isOpen, onClose }) => {
   const [step, setStep] = useState(1);
   const [isManual, setIsManual] = useState(false);
+  const [modelSearchTerm, setModelSearchTerm] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     desc: '',
@@ -37,7 +41,7 @@ export const CreateIDEModal: React.FC<CreateIDEModalProps> = ({ isOpen, onClose 
     }
   });
 
-  // 项目可用配额限制 (回显当前项目剩余)
+  // 项目可用配额限制
   const projectAvailable = { 
     gpu: 4, 
     gpuSpec: 'NVIDIA A10-24GB', 
@@ -51,7 +55,15 @@ export const CreateIDEModal: React.FC<CreateIDEModalProps> = ({ isOpen, onClose 
     [formData.modelId]
   );
 
-  // 资源联动逻辑：当切换到手动时，继承当前套件的值
+  // 过滤后的模型列表
+  const filteredModels = useMemo(() => {
+    return MOCK_USER_MODELS.filter(m => 
+      m.displayName.toLowerCase().includes(modelSearchTerm.toLowerCase()) ||
+      m.name.toLowerCase().includes(modelSearchTerm.toLowerCase()) ||
+      m.id.toLowerCase().includes(modelSearchTerm.toLowerCase())
+    );
+  }, [modelSearchTerm]);
+
   const handleToggleManual = (manual: boolean) => {
     if (manual && !isManual) {
       const b = (IDE_RESOURCE_BUNDLES as any)[formData.bundle];
@@ -69,25 +81,33 @@ export const CreateIDEModal: React.FC<CreateIDEModalProps> = ({ isOpen, onClose 
     setIsManual(manual);
   };
 
-  // 实时资源规格计算
   const currentSpec = useMemo(() => {
     if (!isManual) {
       const b = (IDE_RESOURCE_BUNDLES as any)[formData.bundle];
-      return { gpu: b.gpuCount, cpu: b.cpu, mem: b.memory, storage: b.storage };
+      return { gpuCount: b.gpuCount, cpu: b.cpu, mem: b.memory, storage: b.storage };
     }
     return formData.manual;
   }, [formData, isManual]);
 
   const validation = useMemo(() => ({
-    gpuExceeded: currentSpec.gpu > projectAvailable.gpu,
+    gpuExceeded: currentSpec.gpuCount > projectAvailable.gpu,
     cpuExceeded: currentSpec.cpu > projectAvailable.cpu,
     memExceeded: currentSpec.mem > projectAvailable.mem,
     storageExceeded: currentSpec.storage > projectAvailable.storage,
-    anyExceeded: currentSpec.gpu > projectAvailable.gpu || currentSpec.cpu > projectAvailable.cpu || currentSpec.mem > projectAvailable.mem || currentSpec.storage > projectAvailable.storage
+    anyExceeded: currentSpec.gpuCount > projectAvailable.gpu || currentSpec.cpu > projectAvailable.cpu || currentSpec.mem > projectAvailable.mem || currentSpec.storage > projectAvailable.storage
   }), [currentSpec, projectAvailable]);
 
   const handleNext = () => setStep(s => s + 1);
   const handlePrev = () => setStep(s => s - 1);
+
+  const handleModelSelect = (mid: string) => {
+    const model = MOCK_USER_MODELS.find(m => m.id === mid);
+    setFormData(prev => ({
+      ...prev,
+      modelId: mid,
+      version: model?.latestVersion || ''
+    }));
+  };
 
   const ResourceInput = ({ label, icon: Icon, value, unit, min, max, step, color, isExceeded, onChange }: any) => (
     <div className={`space-y-4 p-5 rounded-2xl border transition-all ${isExceeded ? 'bg-red-50/50 border-red-200' : 'bg-slate-50/50 border-slate-100 hover:border-slate-200'}`}>
@@ -117,15 +137,6 @@ export const CreateIDEModal: React.FC<CreateIDEModalProps> = ({ isOpen, onClose 
     </div>
   );
 
-  const handleModelChange = (mid: string) => {
-    const model = MOCK_USER_MODELS.find(m => m.id === mid);
-    setFormData(prev => ({
-      ...prev,
-      modelId: mid,
-      version: model?.latestVersion || '' // 自动关联最新版本
-    }));
-  };
-
   return (
     <Drawer
       isOpen={isOpen}
@@ -133,10 +144,10 @@ export const CreateIDEModal: React.FC<CreateIDEModalProps> = ({ isOpen, onClose 
       title={
         <div className="flex items-center gap-2">
           <Terminal size={20} className="text-primary-600" />
-          <span className="font-black uppercase tracking-tight">部署云端集成环境</span>
+          <span className="font-black uppercase tracking-tight text-slate-900">部署云端集成环境</span>
         </div>
       }
-      description="Provisioning isolated K8s developer instance"
+      description="PROVISIONING ISOLATED DEV INSTANCE"
       width="max-w-3xl"
       footer={
         <div className="flex justify-between w-full">
@@ -149,7 +160,6 @@ export const CreateIDEModal: React.FC<CreateIDEModalProps> = ({ isOpen, onClose 
         </div>
       }
     >
-      {/* 步骤条 */}
       <div className="flex items-center justify-between mb-10 px-8 relative">
          {[1, 2, 3].map((s) => (
            <div key={s} className="flex flex-col items-center relative z-10">
@@ -160,8 +170,7 @@ export const CreateIDEModal: React.FC<CreateIDEModalProps> = ({ isOpen, onClose 
          <div className="absolute top-[18px] left-20 right-20 h-0.5 bg-slate-100 -z-0"></div>
       </div>
 
-      <div className="min-h-[480px]">
-        {/* Step 1: 环境名称与类型 */}
+      <div className="min-h-[520px]">
         {step === 1 && (
           <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-500">
              <div className="space-y-6">
@@ -176,7 +185,7 @@ export const CreateIDEModal: React.FC<CreateIDEModalProps> = ({ isOpen, onClose 
                         { id: 'JupyterLab', icon: Layout, color: 'text-orange-500', sub: '交互式数据科学体验' },
                         { id: 'VSCode', icon: Code, color: 'text-blue-500', sub: '专业全栈代码开发' }
                       ].map(type => (
-                        <button key={type.id} onClick={() => setFormData({...formData, type: type.id as any})} className={`flex items-center gap-4 p-5 rounded-2xl border transition-all ${formData.type === type.id ? 'bg-primary-50 border-primary-500 shadow-md' : 'bg-white border-slate-200 hover:border-slate-300'}`}>
+                        <button key={type.id} onClick={() => setFormData({...formData, type: type.id as any})} className={`flex items-center gap-4 p-5 rounded-3xl border transition-all ${formData.type === type.id ? 'bg-primary-50 border-primary-500 shadow-md ring-4 ring-primary-500/10' : 'bg-white border-slate-200 hover:border-slate-300'}`}>
                            <div className={`w-11 h-11 rounded-xl bg-white border border-slate-100 flex items-center justify-center shadow-sm ${type.color}`}><type.icon size={24} /></div>
                            <div className="text-left"><p className="text-sm font-black text-slate-900 tracking-tight uppercase">{type.id}</p><p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">{type.sub}</p></div>
                         </button>
@@ -191,57 +200,98 @@ export const CreateIDEModal: React.FC<CreateIDEModalProps> = ({ isOpen, onClose 
           </div>
         )}
 
-        {/* Step 2: 模型挂载 (移除版本选择 UI) */}
+        {/* Step 2: 模型挂载 - 已完全重构 */}
         {step === 2 && (
           <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-             <div className="bg-slate-950 rounded-[32px] p-8 border border-slate-800 flex gap-6 items-center relative overflow-hidden">
-                <div className="w-14 h-14 bg-primary-600/20 rounded-2xl flex items-center justify-center text-primary-400 border border-primary-500/30"><Brain size={28} /></div>
-                <div><h4 className="text-white text-sm font-black uppercase tracking-[0.2em]">挂载平台模型资产</h4><p className="text-slate-400 text-[9px] font-bold uppercase mt-1 tracking-widest opacity-70">Mount stable model weights for development</p></div>
+             <div className="bg-slate-950 rounded-[32px] p-7 border border-slate-800 flex gap-6 items-center relative overflow-hidden">
+                <div className="absolute inset-0 tech-grid opacity-[0.03]"></div>
+                <div className="w-14 h-14 bg-primary-600/20 rounded-2xl flex items-center justify-center text-primary-400 border border-primary-500/30 relative z-10"><Brain size={28} /></div>
+                <div className="relative z-10"><h4 className="text-white text-sm font-black uppercase tracking-[0.2em]">挂载平台模型资产</h4><p className="text-slate-500 text-[9px] font-bold uppercase mt-1 tracking-widest">ASSET MOUNTING FOR COMPUTATION</p></div>
              </div>
 
-             <div className="space-y-6">
-                <div className="space-y-2">
-                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">选择目标模型 (REGISTRY)</label>
-                   <div className="relative">
-                      <select 
-                        value={formData.modelId} 
-                        onChange={(e) => handleModelChange(e.target.value)} 
-                        className="w-full pl-5 pr-10 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold focus:bg-white outline-none transition-all appearance-none cursor-pointer"
-                      >
-                         <option value="">-- SELECT MODEL ASSET --</option>
-                         {MOCK_USER_MODELS.map(m => <option key={m.id} value={m.id}>{m.displayName.toUpperCase()}</option>)}
-                      </select>
-                      <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+             <div className="space-y-5">
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-4 px-1">
+                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                      <List size={12} className="text-primary-500" /> 选择目标模型 (INTERNAL_REGISTRY)
+                   </label>
+                   <div className="relative w-full sm:w-64 group">
+                      <SearchIcon size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-primary-500 transition-colors" />
+                      <input 
+                         type="text" 
+                         value={modelSearchTerm}
+                         onChange={(e) => setModelSearchTerm(e.target.value)}
+                         placeholder="搜索名称 / 架构 / ID..."
+                         className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-bold uppercase outline-none focus:bg-white focus:border-primary-500 transition-all placeholder:text-slate-300"
+                      />
+                   </div>
+                </div>
+
+                {/* 自定义模型选择列表 */}
+                <div className="bg-slate-50/50 border border-slate-200 rounded-[32px] p-2 max-h-[340px] overflow-y-auto scrollbar-thin shadow-inner">
+                   <div className="grid grid-cols-1 gap-2">
+                      {filteredModels.map(m => {
+                         const isActive = formData.modelId === m.id;
+                         return (
+                            <div 
+                               key={m.id}
+                               onClick={() => handleModelSelect(m.id)}
+                               className={`group relative flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer ${
+                                  isActive 
+                                  ? 'bg-white border-primary-500 shadow-lg ring-4 ring-primary-500/5' 
+                                  : 'bg-transparent border-transparent hover:bg-white hover:border-slate-200'
+                               }`}
+                            >
+                               <div className="flex items-center gap-4">
+                                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                                     isActive ? 'bg-primary-600 text-white shadow-tech' : 'bg-white border border-slate-100 text-slate-300 group-hover:text-primary-600'
+                                  }`}>
+                                     <Box size={20} strokeWidth={2.5} />
+                                  </div>
+                                  <div className="flex flex-col">
+                                     <span className={`text-[13px] font-black uppercase tracking-tight ${isActive ? 'text-slate-900' : 'text-slate-600 group-hover:text-slate-900'}`}>{m.displayName}</span>
+                                     <div className="flex items-center gap-2 mt-1">
+                                        <span className="text-[9px] font-mono font-bold text-slate-400 uppercase tracking-tighter">{m.framework.split(' / ')[0]}</span>
+                                        <div className="w-1 h-1 rounded-full bg-slate-200"></div>
+                                        <span className="text-[9px] font-black text-primary-600/60 uppercase tracking-widest">{m.id}</span>
+                                     </div>
+                                  </div>
+                               </div>
+                               {isActive && (
+                                  <div className="w-6 h-6 bg-primary-600 rounded-full flex items-center justify-center text-white shadow-lg animate-in zoom-in duration-300">
+                                     <Check size={14} strokeWidth={4} />
+                                  </div>
+                                )}
+                            </div>
+                         );
+                      })}
+                      {filteredModels.length === 0 && (
+                        <div className="py-12 flex flex-col items-center justify-center text-slate-300">
+                           <Search size={32} className="opacity-20 mb-3" />
+                           <p className="text-[10px] font-black uppercase tracking-widest">未发现匹配的资产</p>
+                        </div>
+                      )}
                    </div>
                 </div>
 
                 {selectedModel && (
                   <div className="space-y-4 animate-in slide-in-from-top-2 duration-300">
-                     {/* 移除版本选择按钮组，仅展示当前关联的自动版本 */}
-                     <div className="p-6 bg-primary-50/30 border border-primary-100 rounded-3xl space-y-4">
+                     <div className="p-6 bg-primary-50/30 border border-primary-100 rounded-[28px] space-y-4 shadow-sm">
                         <div className="flex items-center justify-between border-b border-primary-100/50 pb-4">
                            <div className="flex items-center gap-3">
                               <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-primary-600 shadow-sm"><ShieldCheck size={16} /></div>
-                              <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">已自动关联模型最新版本</span>
+                              <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">资产就绪：已锁定最新版本</span>
                            </div>
                            <Badge status="success" showDot={false}>{formData.version || 'STABLE'}</Badge>
                         </div>
                         
                         <div className="space-y-2">
                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                              <Database size={11} /> 容器内资产挂载点 (MOUNT_POINT)
+                              <Database size={11} /> 内核挂载点定义 (MOUNT_POINT)
                            </label>
                            <div className="px-4 py-2.5 bg-white border border-primary-100 rounded-xl text-[10px] font-mono font-black text-primary-700 break-all leading-relaxed shadow-inner">
                               /mnt/models/{selectedModel.name.toLowerCase()}
                            </div>
                         </div>
-                     </div>
-
-                     <div className="flex items-start gap-3 px-2">
-                        <Info size={16} className="text-slate-400 shrink-0 mt-0.5" />
-                        <p className="text-[10px] text-slate-400 leading-relaxed font-medium">
-                           系统策略：为了环境稳定性，IDE 模式默认挂载模型的最新生产级 Snapshot。如需使用历史特定版本，请在“模型管理”中将其标记为当前最新。
-                        </p>
                      </div>
                   </div>
                 )}
@@ -249,7 +299,7 @@ export const CreateIDEModal: React.FC<CreateIDEModalProps> = ({ isOpen, onClose 
           </div>
         )}
 
-        {/* Step 3: 算力分配与联动 */}
+        {/* Step 3: 算力配置 */}
         {step === 3 && (
           <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
              <div className="flex justify-between items-end px-1">
@@ -258,8 +308,8 @@ export const CreateIDEModal: React.FC<CreateIDEModalProps> = ({ isOpen, onClose 
                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter italic">Precision resource allocation for the container</p>
                 </div>
                 <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 shadow-inner">
-                   <button onClick={() => handleToggleManual(false)} className={`px-5 py-2 text-[10px] font-black rounded-xl transition-all ${!isManual ? 'bg-white text-primary-600 shadow-sm ring-1 ring-slate-200' : 'text-slate-400'}`}>快速套件</button>
-                   <button onClick={() => handleToggleManual(true)} className={`px-5 py-2 text-[10px] font-black rounded-xl transition-all ${isManual ? 'bg-white text-primary-600 shadow-sm ring-1 ring-slate-200' : 'text-slate-400'}`}>手动配置</button>
+                   <button onClick={() => handleToggleManual(false)} className={`px-5 py-2 text-[10px] font-black rounded-xl transition-all ${!isManual ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-400'}`}>快速套件</button>
+                   <button onClick={() => handleToggleManual(true)} className={`px-5 py-2 text-[10px] font-black rounded-xl transition-all ${isManual ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-400'}`}>手动配置</button>
                 </div>
              </div>
 
@@ -313,7 +363,6 @@ export const CreateIDEModal: React.FC<CreateIDEModalProps> = ({ isOpen, onClose 
                 </div>
              )}
 
-             {/* 项目配额回显面板 */}
              <div className={`rounded-[28px] p-6 border transition-all duration-500 relative overflow-hidden ${validation.anyExceeded ? 'bg-red-950 border-red-800' : 'bg-slate-900 border-slate-800 shadow-xl'}`}>
                 <div className="absolute inset-0 tech-grid opacity-10 pointer-events-none"></div>
                 <div className="relative z-10 flex flex-col sm:flex-row justify-between items-center gap-6">

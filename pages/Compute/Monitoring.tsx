@@ -3,7 +3,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { MOCK_CLUSTERS, MOCK_RESOURCE_POOLS, MOCK_MONITORING_HISTORY } from '../../constants';
 import StatCard from '../../components/ui/StatCard';
 import MonitoringChart from '../../components/ui/MonitoringChart';
-import { NodeDetailDrawer } from '../../components/modals/NodeDetailDrawer';
+// Fix: Import NodeDetailDrawer from ModelDetailsDrawer.tsx where it is actually defined and exported
+import { NodeDetailDrawer } from '../../components/modals/ModelDetailsDrawer';
 import { Badge } from '../../components/ui/Badge';
 import { 
   Activity, RefreshCw, Cpu, Zap, 

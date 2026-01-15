@@ -3,19 +3,17 @@ import React, { useState, useMemo } from 'react';
 import { 
   Terminal, Search, Plus, RefreshCw, 
   Code, HardDrive, Cpu, Zap, 
-  Play, Square, ChevronRight, Monitor,
-  ShieldCheck, Clock, Activity, Settings,
-  ActivitySquare, Trash2, Layout, Info,
-  MoreHorizontal, RotateCcw, MonitorPlay,
-  PlayCircle, StopCircle, Globe, Gauge,
-  Box, Filter, History, SearchIcon,
-  PlayIcon, PauseCircle, Power, MoreVertical,
-  Layers, HardDriveIcon, ZapIcon, Sparkles
+  Layout, MoreVertical, 
+  RotateCcw, MonitorPlay, PlayCircle, 
+  StopCircle, SearchIcon, Database, 
+  RotateCw, Calendar,
+  Layers, Clock, History,
+  Timer, Trash2, X, AlertTriangle, CheckCircle2
 } from 'lucide-react';
 import { Badge } from '../../components/ui/Badge';
 import { CreateIDEModal } from '../../components/modals/CreateIDEModal';
 import { IDEEnvironmentDetailsDrawer } from '../../components/modals/IDEEnvironmentDetailsDrawer';
-import { MOCK_IDE_INSTANCES, MOCK_USER_MODELS } from '../../constants';
+import { MOCK_USER_MODELS } from '../../constants';
 import PageHeader from '../../components/layout/PageHeader';
 
 const IDEEnvironmentPage: React.FC = () => {
@@ -24,175 +22,384 @@ const IDEEnvironmentPage: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedInstance, setSelectedInstance] = useState<any | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [instances, setInstances] = useState(MOCK_IDE_INSTANCES);
+  
+  // 删除确认状态
+  const [deletingInstance, setDeletingInstance] = useState<any | null>(null);
+
+  const [instances, setInstances] = useState([
+    {
+      id: 'IDE-001-R',
+      name: 'bert-finetuning-lab',
+      status: 'running',
+      type: 'JupyterLab',
+      image: 'pytorch:2.2.0-cuda12.1',
+      resources: { gpu: '1x A10', cpu: '8c', mem: '32G', storage: '500G' },
+      metrics: { cpu: 42, mem: 65, gpu: 28 },
+      mountedModel: 'BERT中文预训练模型',
+      mountedModelId: 'M-BERT-ZH',
+      mountedVersion: 'v2.1.0',
+      owner: 'zhangsan',
+      ownerRealName: '张三',
+      uptime: '14h 22m',
+      createdAt: '2024-05-24 10:30',
+      updatedAt: '2025-05-24 14:15'
+    },
+    {
+      id: 'IDE-002-S',
+      name: 'llama3-dev-env',
+      status: 'stopped',
+      type: 'VSCode',
+      image: 'vllm:0.4.2',
+      resources: { gpu: '2x A100', cpu: '16c', mem: '64G', storage: '1TB' },
+      metrics: { cpu: 0, mem: 0, gpu: 0 },
+      mountedModel: 'LLAMA-3-8B-INSTRUCT',
+      mountedModelId: 'HUB-LLAMA-3',
+      mountedVersion: 'v1.0.0',
+      owner: 'lisi',
+      ownerRealName: '李四',
+      uptime: '--',
+      createdAt: '2024-05-20 09:15',
+      updatedAt: '2024-05-23 15:45'
+    },
+    {
+      id: 'IDE-004-F',
+      name: 'resnet-training-01',
+      status: 'creation_failed',
+      type: 'VSCode',
+      image: 'tensorflow:2.15.0',
+      resources: { gpu: '1x T4', cpu: '4c', mem: '16G', storage: '100G' },
+      metrics: { cpu: 0, mem: 0, gpu: 0 },
+      mountedModel: 'RESNET50图像分类',
+      mountedModelId: 'M-RESNET50',
+      mountedVersion: 'v1.0.2',
+      owner: 'zhaoliu',
+      ownerRealName: '赵六',
+      uptime: '--',
+      createdAt: '2024-05-24 09:00',
+      updatedAt: '2024-05-24 09:15'
+    }
+  ]);
+
+  const handleAction = (id: string, action: string) => {
+    if (action === 'delete_request') {
+      const ins = instances.find(i => i.id === id);
+      setDeletingInstance(ins);
+      return;
+    }
+
+    setInstances(prev => prev.map(ins => {
+      if (ins.id === id) {
+        switch (action) {
+          case 'start': 
+          case 'retry_start':
+          case 'retry_create':
+            return { ...ins, status: 'starting' };
+          case 'stop': 
+          case 'cancel_create':
+          case 'cancel_start':
+            return { ...ins, status: 'stopped' };
+          case 'restart':
+            return { ...ins, status: 'starting' };
+          default: return ins;
+        }
+      }
+      return ins;
+    }).filter(ins => !(ins.id === id && action === 'delete_confirm')));
+    
+    setDeletingInstance(null);
+  };
+
+  const getStatusConfig = (status: string) => {
+    switch (status) {
+      case 'running': return { 
+        label: '运行中', color: 'text-emerald-500', dot: 'bg-emerald-500', 
+        border: 'border-emerald-500/40 hover:border-emerald-500 hover:shadow-[0_0_20px_-5px_rgba(16,185,129,0.2)]' 
+      };
+      case 'stopped': return { 
+        label: '已停止', color: 'text-slate-400', dot: 'bg-slate-300', 
+        border: 'border-slate-200 hover:border-slate-400' 
+      };
+      case 'starting':
+      case 'creating': return { 
+        label: '处理中', color: 'text-blue-500', dot: 'bg-blue-500', 
+        border: 'border-blue-500/40 hover:border-blue-500 animate-pulse' 
+      };
+      case 'creation_failed':
+      case 'starting_failed': return { 
+        label: '启动失败', color: 'text-red-500', dot: 'bg-red-500', 
+        border: 'border-red-500/60 hover:border-red-500' 
+      };
+      default: return { label: '未知', color: 'text-slate-300', dot: 'bg-slate-200', border: 'border-slate-100' };
+    }
+  };
+
+  // 删除确认弹窗组件
+  const DeleteConfirmModal = ({ instance }: { instance: any }) => (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setDeletingInstance(null)}></div>
+      <div className="relative bg-white rounded-[32px] shadow-2xl w-full max-w-md animate-in fade-in zoom-in-95 duration-200 border border-red-100 overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-1.5 bg-red-500"></div>
+        <div className="px-8 py-10 text-center">
+           <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-100 relative">
+              <div className="absolute inset-0 bg-red-200 rounded-full animate-ping opacity-20"></div>
+              <AlertTriangle size={36} className="text-red-500 relative z-10" />
+           </div>
+           <h3 className="text-xl font-black text-slate-900 mb-2 tracking-tight">销毁 IDE 环境？</h3>
+           <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-6 text-left">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Target Instance</p>
+              <p className="text-sm font-bold text-slate-800 font-mono">{instance.name}</p>
+           </div>
+           <p className="text-xs text-slate-500 leading-relaxed px-4 font-medium">
+             该操作将永久停止计算资源并解绑存储卷，未同步的代码可能丢失。<span className="text-red-600 font-black">此过程不可逆。</span>
+           </p>
+        </div>
+        <div className="px-8 py-5 bg-slate-50 border-t border-slate-200 flex gap-4">
+           <button onClick={() => setDeletingInstance(null)} className="flex-1 px-4 py-3 bg-white border border-slate-300 text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all">放弃</button>
+           <button onClick={() => handleAction(instance.id, 'delete_confirm')} className="flex-1 px-4 py-3 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2">
+             <Trash2 size={14} /> 确认销毁
+           </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const InstanceCard: React.FC<{ ins: any }> = ({ ins }) => {
+    const config = getStatusConfig(ins.status);
+    const isRunning = ins.status === 'running';
+    const isStopped = ins.status === 'stopped';
+    const isFailed = ins.status.includes('failed');
+    const isProcessing = ins.status === 'starting' || ins.status === 'creating';
+
+    return (
+      <div 
+        onClick={() => { setSelectedInstance(ins); setIsDetailsOpen(true); }}
+        className={`group relative bg-white border-2 rounded-[32px] p-6 transition-all duration-500 cursor-pointer flex flex-col h-full overflow-hidden ${config.border}`}
+      >
+        <div className="flex justify-between items-start mb-6">
+          <div className="flex items-center gap-4">
+            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border transition-all duration-500 ${
+              isRunning ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : isFailed ? 'bg-red-50 border-red-100 text-red-500' : 'bg-slate-50 border-slate-100 text-slate-400'
+            }`}>
+               {ins.type === 'JupyterLab' ? <Layout size={26} strokeWidth={2.5} /> : <Code size={26} strokeWidth={2.5} />}
+            </div>
+            <div className="space-y-0.5">
+               <h3 className="text-base font-black text-slate-900 tracking-tight leading-none group-hover:text-primary-600 transition-colors uppercase truncate max-w-[180px]">{ins.name}</h3>
+               <div className="flex items-center gap-2 mt-1.5">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{ins.type}</span>
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-50 border border-slate-100">
+                     <div className={`w-1.5 h-1.5 rounded-full ${config.dot} ${(isRunning || isProcessing) ? 'animate-pulse' : ''}`}></div>
+                     <span className={`text-[9px] font-black uppercase tracking-tighter ${config.color}`}>{config.label}</span>
+                  </div>
+               </div>
+            </div>
+          </div>
+          <button className="p-1.5 text-slate-300 hover:text-slate-500 transition-colors">
+            <MoreVertical size={20} />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 mb-6">
+           <div className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100/50 space-y-3">
+              <div className="space-y-0.5">
+                 <div className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                    <Cpu size={11} className="text-slate-300" /> CPU / GPU
+                 </div>
+                 <p className="text-[11px] font-black text-slate-800 font-mono tracking-tighter uppercase leading-none">
+                    {ins.resources.cpu} | {ins.resources.gpu}
+                 </p>
+              </div>
+              <div className="space-y-0.5">
+                 <div className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                    <Database size={11} className="text-slate-300" /> MEM / DISK
+                 </div>
+                 <p className="text-[11px] font-black text-slate-800 font-mono tracking-tighter uppercase leading-none">
+                    {ins.resources.mem} | {ins.resources.storage}
+                 </p>
+              </div>
+           </div>
+           
+           <div className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100/50 flex flex-col justify-center">
+              <div className="space-y-4">
+                <div className="space-y-0.5">
+                   <div className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">
+                      <Timer size={11} className="text-slate-300" /> 运行时长
+                   </div>
+                   <p className={`text-[11px] font-black font-mono tracking-tighter leading-none ${isRunning ? 'text-emerald-500' : 'text-slate-300'}`}>
+                      {ins.uptime}
+                   </p>
+                </div>
+                <div className="space-y-0.5 pt-1 border-t border-slate-100/50">
+                   <div className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">
+                      <Calendar size={11} className="text-slate-300" /> 创建时间
+                   </div>
+                   <p className="text-[9px] font-black text-slate-500 font-mono leading-none tracking-tighter">
+                      {ins.createdAt}
+                   </p>
+                </div>
+              </div>
+           </div>
+        </div>
+
+        <div className="p-3.5 bg-slate-50 border border-slate-200/60 rounded-xl flex items-center justify-between mb-6">
+           <div className="flex items-center gap-3">
+              <div className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-primary-500 shadow-sm">
+                <Layers size={14} strokeWidth={2.5} />
+              </div>
+              <div className="flex flex-col">
+                 <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Mount Point</span>
+                 <p className="text-[10px] font-black text-slate-900 uppercase tracking-tight mt-1.5 truncate max-w-[150px]">{ins.mountedModel}</p>
+              </div>
+           </div>
+           <Badge status="info" showDot={false}>{ins.mountedVersion}</Badge>
+        </div>
+
+        <div className="mt-auto flex items-center justify-between pt-5 border-t border-slate-100">
+           <div className="flex items-center gap-3.5">
+              {/* Creator Block */}
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-500 shadow-inner">
+                   {ins.ownerRealName[0]}
+                </div>
+                <div className="flex flex-col">
+                   <span className="text-[11px] font-bold text-slate-800 leading-none">{ins.ownerRealName}</span>
+                   <p className="text-[8px] text-slate-400 font-bold uppercase mt-1">Creator</p>
+                </div>
+              </div>
+              
+              {/* Visual Separator */}
+              <div className="h-6 w-px bg-slate-100"></div>
+
+              {/* Updated At Block */}
+              <div className="flex flex-col">
+                 <div className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">
+                    <History size={10} className="text-slate-300" /> Updated
+                 </div>
+                 <p className="text-[9px] font-black text-slate-500 font-mono leading-none tracking-tighter mt-1">
+                    {ins.updatedAt}
+                 </p>
+              </div>
+           </div>
+
+           <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+              {isRunning && (
+                <>
+                  <button className="px-5 py-2 bg-slate-950 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-600 transition-all flex items-center gap-1.5 shadow-lg active:scale-95">
+                     <MonitorPlay size={14} strokeWidth={2.5} /> 进入环境
+                  </button>
+                  <button onClick={() => handleAction(ins.id, 'stop')} title="停止" className="p-2 bg-white border border-slate-200 text-slate-400 hover:text-red-600 rounded-full transition-all">
+                     <StopCircle size={16} strokeWidth={2.5} />
+                  </button>
+                </>
+              )}
+
+              {isStopped && (
+                <>
+                  <button onClick={() => handleAction(ins.id, 'start')} className="px-6 py-2 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center gap-1.5 shadow-lg active:scale-95">
+                     <PlayCircle size={14} strokeWidth={2.5} /> 启动
+                  </button>
+                  <button onClick={() => handleAction(ins.id, 'delete_request')} title="销毁环境" className="p-2 bg-white border border-slate-200 text-slate-300 hover:text-red-600 rounded-full transition-all">
+                     <Trash2 size={16} strokeWidth={2.5} />
+                  </button>
+                </>
+              )}
+
+              {isProcessing && (
+                <button onClick={() => handleAction(ins.id, 'stop')} className="px-6 py-2 bg-slate-100 text-slate-500 border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-50 hover:text-red-600 transition-all flex items-center gap-2">
+                   <X size={14} strokeWidth={3} /> 取消操作
+                </button>
+              )}
+
+              {isFailed && (
+                <>
+                  <button onClick={() => handleAction(ins.id, 'retry_create')} className="px-6 py-2 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all flex items-center gap-1.5 shadow-lg active:scale-95">
+                     <RotateCw size={14} /> 重试部署
+                  </button>
+                  <button onClick={() => handleAction(ins.id, 'delete_request')} title="销毁环境" className="p-2 bg-white border border-slate-200 text-slate-300 hover:text-red-600 rounded-full transition-all">
+                     <Trash2 size={16} strokeWidth={2.5} />
+                  </button>
+                </>
+              )}
+           </div>
+        </div>
+      </div>
+    );
+  };
 
   const filteredInstances = useMemo(() => {
     return instances.filter(ins => {
       const matchesSearch = ins.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                           ins.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           ins.mountedModel.toLowerCase().includes(searchTerm.toLowerCase());
+                           ins.id.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesModel = modelFilter === 'all' || ins.mountedModelId === modelFilter;
       return matchesSearch && matchesModel;
     });
   }, [instances, searchTerm, modelFilter]);
 
-  const handleAction = (id: string, action: 'start' | 'stop' | 'delete') => {
-    setInstances(prev => prev.map(ins => {
-      if (ins.id === id) {
-        if (action === 'start') return { ...ins, status: 'running' };
-        if (action === 'stop') return { ...ins, status: 'stopped' };
-      }
-      return ins;
-    }).filter(ins => !(ins.id === id && action === 'delete')));
-  };
-
-  // 根据模型名称返回特定的视觉标签颜色
-  const getModelBadgeType = (modelName: string): "primary" | "info" | "success" | "warning" => {
-    if (modelName.includes('GPT') || modelName.includes('Stable Diffusion')) return "info"; // 生成式 - 蓝色/紫色调
-    if (modelName.includes('YOLO') || modelName.includes('ResNet')) return "primary"; // 视觉 - 深蓝
-    if (modelName.includes('BERT') || modelName.includes('T5')) return "success"; // NLP - 绿色
-    return "neutral" as any;
-  };
-
   return (
-    <div className="space-y-8 animate-in fade-in duration-700 font-sans pb-20">
+    <div className="space-y-8 animate-in fade-in duration-700 font-sans pb-24">
       <CreateIDEModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
       <IDEEnvironmentDetailsDrawer 
         isOpen={isDetailsOpen} 
         onClose={() => setIsDetailsOpen(false)} 
         instance={selectedInstance}
-        onAction={handleAction}
+        onAction={(id, action) => handleAction(id, action)}
       />
+      {deletingInstance && <DeleteConfirmModal instance={deletingInstance} />}
 
       <PageHeader 
         icon={Terminal}
         title="云端集成开发环境 (IDE)"
-        subtitle="ON-DEMAND GPU SANDBOXING & DEVELOPMENT"
-        badgeText="ISOLATED K8S DOMAIN"
+        subtitle="EPHEMERAL COMPUTE SANDBOXING & EXPERIMENTAL DEVELOPMENT"
+        badgeText="VIRTUALIZATION READY"
         actions={
-          <>
-            <button onClick={() => window.location.reload()} className="p-3 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-primary-600 transition-all shadow-sm"><RefreshCw size={18} /></button>
-            <button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-2.5 px-8 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-all font-black text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-primary-500/20 active:scale-95">
-              <Plus size={16} strokeWidth={3} />
-              <span>新建 IDE 环境</span>
-            </button>
-          </>
+          <button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-2.5 px-7 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-all font-black text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-primary-500/20 active:scale-95">
+            <Plus size={18} strokeWidth={3} />
+            <span>新建 IDE 环境</span>
+          </button>
         }
       />
 
-      <div className="flex flex-col xl:flex-row justify-between items-center gap-5 bg-white p-4 rounded-3xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col xl:flex-row justify-between items-center gap-5 bg-white p-4 rounded-[24px] border border-slate-200 shadow-sm">
          <div className="flex items-center gap-4 w-full xl:w-auto">
             <div className="relative flex-1 xl:w-80 group">
-               <SearchIcon size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-primary-500 transition-colors" />
+               <SearchIcon size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-primary-500 pointer-events-none" />
                <input 
                   type="text" 
-                  placeholder="搜索环境、ID 或 挂载模型..." 
+                  placeholder="搜索名称 / 负责人 / ID..." 
                   value={searchTerm} 
                   onChange={(e) => setSearchTerm(e.target.value)} 
-                  className="w-full pl-12 pr-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] border border-slate-200 rounded-2xl bg-slate-50 focus:bg-white focus:outline-none focus:border-primary-500 transition-all font-sans" 
+                  className="w-full pl-11 pr-4 py-2.5 text-[10px] font-black uppercase tracking-widest border border-slate-100 rounded-2xl bg-slate-50 focus:bg-white focus:border-primary-500 transition-all placeholder:text-slate-300" 
                />
             </div>
-            
-            <div className="h-6 w-px bg-slate-200"></div>
-
-            <div className="flex items-center gap-3">
-               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest hidden sm:block">模型类型:</span>
-               <select 
-                  value={modelFilter}
-                  onChange={(e) => setModelFilter(e.target.value)}
-                  className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-primary-500 cursor-pointer"
-               >
-                  <option value="all">ALL ASSET TYPES</option>
-                  {MOCK_USER_MODELS.map(m => <option key={m.id} value={m.id}>{m.displayName.toUpperCase()}</option>)}
-               </select>
-            </div>
+            <div className="h-6 w-px bg-slate-100 hidden sm:block"></div>
+            <select 
+               value={modelFilter}
+               onChange={(e) => setModelFilter(e.target.value)}
+               className="px-5 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-primary-500 cursor-pointer appearance-none min-w-[220px]"
+            >
+               <option value="all">所有资产 (ALL ASSETS)</option>
+               {MOCK_USER_MODELS.map(m => <option key={m.id} value={m.id}>{m.displayName.toUpperCase()}</option>)}
+            </select>
          </div>
-         
-         <div className="flex items-center gap-3 text-slate-400">
-            <Badge status="info" showDot={false}>AUTO-RECOVERY: ENABLED</Badge>
+         <div className="px-4 py-2 bg-primary-50/50 border border-primary-100 rounded-xl flex items-center gap-2.5">
+            <div className="w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse"></div>
+            <span className="text-[9px] font-black text-primary-700 uppercase tracking-widest">算力配额占用: 6/16 GPU ACTIVE</span>
          </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-         {filteredInstances.map((ws) => (
-            <div 
-               key={ws.id} 
-               onClick={() => { setSelectedInstance(ws); setIsDetailsOpen(true); }}
-               className={`group bg-white border rounded-[40px] p-8 hover:shadow-2xl transition-all duration-500 flex flex-col relative overflow-hidden cursor-pointer ${ws.status === 'running' ? 'border-slate-200 hover:border-primary-400' : 'border-slate-100 opacity-80'}`}
-            >
-               {/* Header Segment */}
-               <div className="flex justify-between items-start mb-8 relative z-10">
-                  <div className="flex items-center gap-4">
-                     <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border transition-all duration-500 ${ws.status === 'running' ? 'bg-emerald-50 border-emerald-100 text-emerald-600 shadow-[0_0_20px_rgba(16,185,129,0.2)]' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>
-                        {ws.type === 'JupyterLab' ? <Layout size={28} /> : <Code size={28} />}
-                     </div>
-                     <div>
-                        <h3 className="text-xl font-black text-slate-900 tracking-tighter uppercase leading-none group-hover:text-primary-600 transition-colors mb-2">{ws.name}</h3>
-                        <div className="flex items-center gap-2">
-                           <Badge status={ws.status === 'running' ? 'success' : ws.status === 'stopped' ? 'neutral' : 'error'}>
-                              {ws.status === 'running' ? '运行中' : ws.status === 'stopped' ? '停止' : '异常'}
-                           </Badge>
-                           <span className="text-[9px] font-mono font-bold text-slate-400 uppercase tracking-tighter">{ws.id}</span>
-                        </div>
-                     </div>
-                  </div>
-                  <button className="p-2 text-slate-300 hover:text-slate-900 transition-all"><MoreVertical size={18} /></button>
-               </div>
-
-               {/* Specs Summary Segment */}
-               <div className="grid grid-cols-2 gap-6 mb-8 p-5 bg-slate-50/50 rounded-3xl border border-slate-100/50 group-hover:bg-primary-50/20 transition-all">
-                  <div className="space-y-1">
-                     <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">基础镜像</p>
-                     <p className="text-[11px] font-bold text-slate-800 truncate" title={ws.image}>{ws.image}</p>
-                  </div>
-                  <div className="space-y-1">
-                     <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">挂载资产</p>
-                     <div className="flex items-center gap-1.5 overflow-hidden">
-                        <Badge status={getModelBadgeType(ws.mountedModel)} showDot={false}>{ws.mountedModel}</Badge>
-                     </div>
-                  </div>
-                  <div className="space-y-1">
-                     <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">算力规格</p>
-                     <p className="text-[11px] font-bold text-slate-800 font-mono tracking-tighter">{ws.resources.gpu} | {ws.resources.cpu}</p>
-                  </div>
-                  <div className="space-y-1">
-                     <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">运行时长</p>
-                     <div className="flex items-center gap-1.5">
-                        <History size={10} className="text-emerald-500" />
-                        <p className="text-[11px] font-bold text-slate-800 font-mono">{ws.uptime}</p>
-                     </div>
-                  </div>
-               </div>
-
-               {/* Card Footer Actions */}
-               <div className="mt-auto pt-6 border-t border-slate-100 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                     <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500 border border-slate-200">
-                        {ws.owner[0].toUpperCase()}
-                     </div>
-                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{ws.owner}</span>
-                  </div>
-                  <button 
-                     disabled={ws.status !== 'running'} 
-                     onClick={(e) => { e.stopPropagation(); alert('Initializing IDE Connection...'); }}
-                     className={`flex items-center gap-2.5 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-xl active:scale-95 ${ws.status === 'running' ? 'bg-slate-950 text-white hover:bg-primary-600' : 'bg-slate-100 text-slate-300 cursor-not-allowed'}`}
-                  >
-                     OPEN IDE <MonitorPlay size={14} strokeWidth={3} />
-                  </button>
-               </div>
-            </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+         {filteredInstances.map((ins) => (
+            <InstanceCard key={ins.id} ins={ins} />
          ))}
 
-         {/* Empty/Add Slot */}
          <div 
             onClick={() => setIsCreateModalOpen(true)}
-            className="border-2 border-dashed border-slate-200 rounded-[40px] p-8 flex flex-col items-center justify-center text-center group hover:border-primary-400 hover:bg-primary-50/10 transition-all cursor-pointer min-h-[400px]"
+            className="border-2 border-dashed border-slate-200 rounded-[32px] p-8 flex flex-col items-center justify-center text-center group hover:border-primary-200 hover:bg-primary-50/5 transition-all cursor-pointer min-h-[400px]"
          >
-            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 group-hover:bg-white group-hover:text-primary-600 group-hover:shadow-xl group-hover:scale-110 transition-all duration-500 mb-8">
-               <Plus size={40} strokeWidth={2.5} />
+            <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-200 group-hover:bg-white group-hover:text-primary-600 group-hover:shadow-lg group-hover:scale-110 transition-all duration-500 mb-6">
+               <Plus size={32} strokeWidth={2.5} />
             </div>
-            <h4 className="text-sm font-black text-slate-900 uppercase tracking-[0.3em] mb-3">Provision New Sandbox</h4>
-            <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest max-w-[200px]">Create an isolated GPU environment with custom frameworks</p>
+            <h4 className="text-sm font-black text-slate-900 uppercase tracking-[0.2em] mb-2">Provision Sandbox</h4>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest max-w-[220px] leading-relaxed">申请隔离的高性能计算环境进行大模型实验或业务开发</p>
          </div>
       </div>
     </div>
