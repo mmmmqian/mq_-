@@ -109,16 +109,21 @@ export const MOCK_PROJECTS: Project[] = [
 ];
 
 // --- 项目成员 Mock 数据 ---
+// Added missing MOCK_PROJECT_MEMBERS to fix import error in ProjectDetailsDrawer.tsx
 export const MOCK_PROJECT_MEMBERS: Record<string, ProjectMember[]> = {
   'PROJ-CORE-AI-01': [
-    { userId: 'U-001', userName: 'zhangsan', realName: '张三', role: 'admin', joinedAt: '2024-01-10' },
-    { userId: 'U-002', userName: 'tech_expert', realName: '王五', role: 'scientist', joinedAt: '2024-01-12' },
-    { userId: 'U-003', userName: 'dev_01', realName: '李思思', role: 'developer', joinedAt: '2024-01-15' }
+    { userId: 'u-1', userName: 'zhangsan', realName: '张三', role: 'admin', joinedAt: '2024-01-10' },
+    { userId: 'u-2', userName: 'lisi', realName: '李四', role: 'algorithm', joinedAt: '2024-01-12' },
+    { userId: 'u-3', userName: 'wangwu', realName: '王五', role: 'developer', joinedAt: '2024-02-01' }
+  ],
+  'PROJ-VISION-X-99': [
+    { userId: 'u-4', userName: 'zhaoliu', realName: '赵六', role: 'admin', joinedAt: '2024-02-15' },
+    { userId: 'u-5', userName: 'sunqi', realName: '孙七', role: 'scientist', joinedAt: '2024-03-01' }
   ]
 };
 
-// --- IDE 资源套件配置 ---
-export const IDE_RESOURCE_BUNDLES = {
+// --- 算力资源套件配置 (Inference/IDE 通用) ---
+export const RESOURCE_BUNDLES = {
   basic: {
     id: 'basic',
     name: '基础型 (Entry)',
@@ -127,7 +132,7 @@ export const IDE_RESOURCE_BUNDLES = {
     cpu: 4,
     memory: 16,
     storage: 100,
-    desc: '适用于代码调试与轻量级数据分析'
+    desc: '适用于代码调试与轻量级 NLP 模型推理'
   },
   standard: {
     id: 'standard',
@@ -137,7 +142,7 @@ export const IDE_RESOURCE_BUNDLES = {
     cpu: 8,
     memory: 32,
     storage: 500,
-    desc: '主流深度学习模型训练与开发首选'
+    desc: '主流深度学习模型在线服务的黄金配置'
   },
   highPerf: {
     id: 'highPerf',
@@ -147,9 +152,12 @@ export const IDE_RESOURCE_BUNDLES = {
     cpu: 32,
     memory: 128,
     storage: 1024,
-    desc: '针对大模型微调与复杂计算优化'
+    desc: '针对大参数量模型与复杂计算链路优化'
   }
 };
+
+// 保持向下兼容
+export const IDE_RESOURCE_BUNDLES = RESOURCE_BUNDLES;
 
 // --- IDE 实例 Mock 数据 ---
 export const MOCK_IDE_INSTANCES = [

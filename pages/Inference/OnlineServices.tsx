@@ -18,15 +18,15 @@ import PageHeader from '../../components/layout/PageHeader';
 import { Drawer } from '../../components/ui/Drawer';
 import MonitoringChart from '../../components/ui/MonitoringChart';
 
-type AuditTab = 'overview' | 'telemetry' | 'access' | 'specs' | 'logs';
+type AuditTab = 'overview' | 'telemetry' | 'access' | 'specs';
 
 const getStatusConfig = (status: string) => {
   switch (status) {
-    case 'running': return { label: '运行中', dot: 'bg-emerald-500', variant: 'success' as const };
-    case 'deploying': return { label: '部署中', dot: 'bg-amber-500', variant: 'warning' as const };
-    case 'failed': return { label: '异常', dot: 'bg-red-500', variant: 'error' as const };
-    case 'stopped': return { label: '已停止', dot: 'bg-slate-400', variant: 'neutral' as const };
-    default: return { label: '未知', dot: 'bg-slate-300', variant: 'neutral' as const };
+    case 'running': return { label: '运行中', variant: 'success' as const };
+    case 'deploying': return { label: '部署中', variant: 'warning' as const };
+    case 'failed': return { label: '异常', variant: 'error' as const };
+    case 'stopped': return { label: '已停止', variant: 'neutral' as const };
+    default: return { label: '未知', variant: 'neutral' as const };
   }
 };
 
@@ -170,10 +170,9 @@ const OnlineServicesPage: React.FC = () => {
             <div className="flex border-b border-slate-200 sticky top-0 bg-white z-20">
                {[
                  { id: 'overview', label: '基础审计 (OVERVIEW)', icon: Info },
-                 { id: 'telemetry', label: '实时遥测 (TELEMETRY)', icon: ActivitySquare },
+                 { id: 'telemetry', label: '实时遥测 & 审计 (TELEMETRY)', icon: ActivitySquare },
                  { id: 'access', label: '接入控制 (ACCESS)', icon: Network },
-                 { id: 'specs', label: '算力规格 (SPEC)', icon: Cpu },
-                 { id: 'logs', label: '操作审计 (LOGS)', icon: TerminalSquare }
+                 { id: 'specs', label: '算力规格 (SPEC)', icon: Cpu }
                ].map(tab => (
                  <button 
                    key={tab.id}
@@ -223,6 +222,31 @@ const OnlineServicesPage: React.FC = () => {
                               <div className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">SLO: &lt; 200ms</div>
                            </div>
                            <MonitoringChart data={latencyTrend} height={200} color="#6366f1" label="Latency" unit="ms" />
+                        </div>
+                     </div>
+
+                     <div className="space-y-5 pt-4">
+                        <div className="flex justify-between items-center px-1">
+                           <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2"><TerminalSquare size={14} className="text-slate-400" /> 生产审计与操作流 (AUDIT_STDOUT)</h5>
+                           <button onClick={() => alert('正在归档日志包...')} className="flex items-center gap-2 px-5 py-2 bg-primary-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-700 shadow-xl shadow-primary-500/20 active:scale-95 transition-all">
+                              <Download size={14} /> 导出完整审计日志
+                           </button>
+                        </div>
+                        <div className="bg-slate-950 border border-slate-800 rounded-[32px] p-8 shadow-inner font-mono text-[11px] leading-relaxed h-[300px] overflow-y-auto group relative">
+                           <div className="absolute top-4 right-4 z-10">
+                              <div className="flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-lg backdrop-blur-md">
+                                 <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
+                                 <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest leading-none">Live Telemetry Stream</span>
+                              </div>
+                           </div>
+                           <div className="space-y-2 opacity-80 group-hover:opacity-100 transition-opacity">
+                              <p className="text-slate-500 flex gap-4"><span className="shrink-0 w-32">[14:15:01.002]</span> <span className="text-emerald-500 font-black w-10">INFO</span> Gateway health probe: Succeeded</p>
+                              <p className="text-slate-500 flex gap-4"><span className="shrink-0 w-32">[14:15:04.421]</span> <span className="text-emerald-500 font-black w-10">INFO</span> Request handled in 124ms (TraceID: b8a2)</p>
+                              <p className="text-slate-500 flex gap-4"><span className="shrink-0 w-32">[14:15:10.152]</span> <span className="text-amber-500 font-black w-10">WARN</span> VRAM fragmentation detected: 12% at CUDA:0</p>
+                              <p className="text-slate-500 flex gap-4"><span className="shrink-0 w-32">[14:15:15.892]</span> <span className="text-emerald-500 font-black w-10">INFO</span> KV Cache optimized for model SVC-9921</p>
+                              <p className="text-slate-500 flex gap-4"><span className="shrink-0 w-32">[14:15:22.012]</span> <span className="text-blue-500 font-black w-10">EVNT</span> Autoscaler synced 4 replicas from K8s Controller</p>
+                              <div className="w-1.5 h-3.5 bg-primary-500 animate-pulse mt-1 ml-36"></div>
+                           </div>
                         </div>
                      </div>
                   </div>
@@ -325,27 +349,6 @@ print(res.json())`}</pre>
                   </div>
                )}
 
-               {activeTab === 'logs' && (
-                  <div className="space-y-6 animate-in fade-in duration-500 h-full flex flex-col">
-                     <div className="flex justify-between items-center px-1">
-                        <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2"><TerminalSquare size={14} className="text-slate-400" /> 实时生产审计流 (AUDIT_STDOUT)</h5>
-                        <button onClick={() => alert('正在归档日志包...')} className="flex items-center gap-2 px-5 py-2 bg-primary-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-700 shadow-xl shadow-primary-500/20 active:scale-95 transition-all">
-                           <Download size={14} /> 导出完整审计日志
-                        </button>
-                     </div>
-                     <div className="flex-1 bg-slate-950 border border-slate-800 rounded-[32px] p-8 shadow-inner font-mono text-[11px] leading-relaxed h-[400px] overflow-y-auto group">
-                        <div className="space-y-2 opacity-80 group-hover:opacity-100 transition-opacity">
-                           <p className="text-slate-500 flex gap-4"><span className="shrink-0 w-32">[14:15:01.002]</span> <span className="text-emerald-500 font-black w-10">INFO</span> Gateway health probe: Succeeded</p>
-                           <p className="text-slate-500 flex gap-4"><span className="shrink-0 w-32">[14:15:04.421]</span> <span className="text-emerald-500 font-black w-10">INFO</span> Request handled in 124ms (TraceID: b8a2)</p>
-                           <p className="text-slate-500 flex gap-4"><span className="shrink-0 w-32">[14:15:10.152]</span> <span className="text-amber-500 font-black w-10">WARN</span> VRAM fragmentation detected: 12% at CUDA:0</p>
-                           <p className="text-slate-500 flex gap-4"><span className="shrink-0 w-32">[14:15:15.892]</span> <span className="text-emerald-500 font-black w-10">INFO</span> KV Cache optimized for model SVC-9921</p>
-                           <p className="text-slate-500 flex gap-4"><span className="shrink-0 w-32">[14:15:22.012]</span> <span className="text-blue-500 font-black w-10">EVNT</span> Autoscaler synced 4 replicas from K8s Controller</p>
-                           <div className="w-1.5 h-3.5 bg-primary-500 animate-pulse mt-1 ml-36"></div>
-                        </div>
-                     </div>
-                  </div>
-               )}
-
                {activeTab === 'overview' && (
                   <div className="space-y-8 animate-in fade-in duration-500">
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -420,7 +423,7 @@ print(res.json())`}</pre>
       <div className="flex justify-between items-center bg-white p-4 rounded-3xl border border-slate-200 shadow-sm">
          <div className="relative group w-full md:w-96">
             <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-primary-500 transition-colors" />
-            <input type="text" placeholder="搜索服务名称或 ID..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-11 pr-4 py-2.5 text-[10px] font-black uppercase tracking-widest border border-slate-200 rounded-2xl bg-white focus:outline-none focus:border-primary-500 w-full transition-all" />
+            <input type="text" placeholder="搜索服务名称 or ID..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-11 pr-4 py-2.5 text-[10px] font-black uppercase tracking-widest border border-slate-200 rounded-2xl bg-white focus:outline-none focus:border-primary-500 w-full transition-all" />
          </div>
          <button className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-400 hover:text-primary-600 transition-all"><RefreshCw size={18} /></button>
       </div>
@@ -448,37 +451,42 @@ print(res.json())`}</pre>
                      
                      return (
                         <tr key={svc.id} className="group hover:bg-slate-50/80 transition-all cursor-pointer">
-                           <td className="pl-10 pr-6 py-7">
+                           <td className="pl-10 pr-6 py-5">
                               <div className="flex items-center gap-4">
                                  <div className={`w-10 h-10 border rounded-xl flex items-center justify-center transition-colors ${isRunning ? 'bg-primary-50 border-primary-100 text-primary-600' : 'bg-slate-50 border-slate-100 text-slate-400'}`}><Terminal size={18} strokeWidth={2.5} /></div>
-                                 <div className="flex flex-col"><span className="font-black text-slate-900 tracking-tight text-sm uppercase group-hover:text-primary-600 transition-colors">{svc.name}</span><span className="font-mono text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-tighter">{svc.id}</span></div>
+                                 <div className="flex flex-col"><span className="font-black text-slate-900 tracking-tight text-sm uppercase group-hover:text-primary-600 transition-colors">{svc.name}</span><span className="font-mono text-[9px] font-bold text-slate-400 mt-0.5 uppercase tracking-tighter">{svc.id}</span></div>
                               </div>
                            </td>
-                           <td className="px-6 py-7">
-                              <div className="flex flex-col gap-1"><span className="text-[11px] font-black text-slate-700 tracking-tight uppercase flex items-center gap-1.5"><Box size={12} className="text-slate-300" /> {svc.modelName}</span><Badge status="primary" showDot={false}>{svc.modelVersion}</Badge></div>
+                           <td className="px-6 py-5">
+                              <div className="flex flex-col gap-1.5">
+                                 <span className="text-[11px] font-black text-slate-700 tracking-tight uppercase flex items-center gap-1.5"><Box size={12} className="text-slate-300" /> {svc.modelName}</span>
+                                 <div className="flex">
+                                    <span className="px-2 py-0.5 bg-primary-50 text-primary-700 border border-primary-100 rounded text-[9px] font-mono font-black truncate max-w-[100px]" title={svc.modelVersion}>{svc.modelVersion}</span>
+                                 </div>
+                              </div>
                            </td>
-                           <td className="px-6 py-7"><div className="flex items-center gap-2"><div className={`w-1.5 h-1.5 rounded-full ${isRunning ? 'animate-pulse' : ''} ${visual.dot}`}></div><Badge status={visual.variant}>{visual.label}</Badge></div></td>
-                           <td className="px-6 py-7"><div className="flex items-center gap-2"><Activity size={14} className="text-primary-400" /><span className="font-mono font-black text-slate-900 text-sm tracking-tighter">{svc.qps?.toLocaleString() || '0'}</span></div></td>
-                           <td className="px-6 py-7"><div className="flex items-center gap-2"><Clock size={14} className={svc.latency && svc.latency > 200 ? 'text-amber-500' : 'text-emerald-500'} /><span className={`font-mono font-black text-sm tracking-tighter ${svc.latency && svc.latency > 200 ? 'text-amber-600' : 'text-slate-900'}`}>{svc.latency || '-'}ms</span></div></td>
-                           <td className="px-6 py-7"><div className="flex flex-col gap-1"><div className="flex items-center gap-1.5 text-[10px] font-black text-slate-600 uppercase tracking-tighter">{svc.createdAt}</div><div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest">{svc.owner}</div></div></td>
-                           <td className="px-10 py-7 text-right">
+                           <td className="px-6 py-5"><Badge status={visual.variant} showDot>{visual.label}</Badge></td>
+                           <td className="px-6 py-5"><div className="flex items-center gap-2"><Activity size={14} className="text-primary-400" /><span className="font-mono font-black text-slate-900 text-sm tracking-tighter">{svc.qps?.toLocaleString() || '0'}</span></div></td>
+                           <td className="px-6 py-5"><div className="flex items-center gap-2"><Clock size={14} className={svc.latency && svc.latency > 200 ? 'text-amber-500' : 'text-emerald-500'} /><span className={`font-mono font-black text-sm tracking-tighter ${svc.latency && svc.latency > 200 ? 'text-amber-600' : 'text-slate-900'}`}>{svc.latency || '-'}ms</span></div></td>
+                           <td className="px-6 py-5"><div className="flex flex-col gap-1"><div className="flex items-center gap-1.5 text-[10px] font-black text-slate-600 uppercase tracking-tighter">{svc.createdAt}</div><div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest">{svc.owner}</div></div></td>
+                           <td className="px-10 py-5 text-right">
                               <div className="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-all duration-300">
+                                 {/* 通用操作：服务详情 */}
+                                 <button onClick={() => handleAction(svc.id, 'audit')} className="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all" title="服务详情"><Info size={18} strokeWidth={2.5} /></button>
+                                 
                                  {isRunning && (
                                     <>
                                        <button onClick={() => handleAction(svc.id, 'monitor')} className="p-2.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all" title="服务监控"><Gauge size={18} strokeWidth={2.5} /></button>
-                                       <button onClick={() => handleAction(svc.id, 'audit')} className="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all" title="资产审计"><Info size={18} strokeWidth={2.5} /></button>
                                        <button onClick={() => handleAction(svc.id, 'experience')} className="p-2.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-all" title="在线体验"><MonitorPlay size={18} strokeWidth={2.5} /></button>
                                        <button onClick={() => handleAction(svc.id, 'stop')} className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all" title="停止服务"><StopCircle size={18} strokeWidth={2.5} /></button>
                                     </>
                                  )}
-                                 {isStopped && <button onClick={() => handleAction(svc.id, 'start')} className="p-2.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all" title="启动服务"><PlayCircle size={18} strokeWidth={2.5} /></button>}
-                                 {isFailed && (
-                                    <>
-                                       <button onClick={() => handleAction(svc.id, 'restart')} className="p-2.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all" title="重启服务"><RotateCw size={18} strokeWidth={2.5} /></button>
-                                       <button onClick={() => handleAction(svc.id, 'audit')} className="p-2.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all" title="异常审计"><Info size={18} strokeWidth={2.5} /></button>
-                                    </>
+                                 {isStopped && (
+                                    <button onClick={() => handleAction(svc.id, 'start')} className="p-2.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all" title="启动服务"><PlayCircle size={18} strokeWidth={2.5} /></button>
                                  )}
-                                 <button className="p-2.5 text-slate-300 hover:text-slate-900 transition-all ml-1"><MoreHorizontal size={18} /></button>
+                                 {isFailed && (
+                                    <button onClick={() => handleAction(svc.id, 'restart')} className="p-2.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all" title="重启服务"><RotateCw size={18} strokeWidth={2.5} /></button>
+                                 )}
                               </div>
                            </td>
                         </tr>
