@@ -12,7 +12,7 @@ import {
   Lock, Share2, Globe, Command, Trash2,
   Plus, Copy, Link, Gauge, MousePointer2,
   ChevronRight, FileJson, FolderSync,
-  DownloadCloud, BarChart
+  DownloadCloud, BarChart, FileText
 } from 'lucide-react';
 import MonitoringChart from '../ui/MonitoringChart';
 import { MOCK_MONITORING_HISTORY } from '../../constants';
@@ -26,7 +26,6 @@ interface ModelAssetDetailsDrawerProps {
 }
 
 export const ModelAssetDetailsDrawer: React.FC<ModelAssetDetailsDrawerProps> = ({ isOpen, onClose, model, initialTab = 'overview' }) => {
-  // --- 1. 所有 Hooks 必须定义在组件顶部 ---
   const [activeTab, setActiveTab] = useState(initialTab);
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -37,7 +36,6 @@ export const ModelAssetDetailsDrawer: React.FC<ModelAssetDetailsDrawerProps> = (
     }
   }, [initialTab, isOpen]);
 
-  // --- 2. 处理逻辑 ---
   const handleCopyPath = (path: string) => {
     navigator.clipboard.writeText(path);
     setCopiedId(path);
@@ -53,18 +51,16 @@ export const ModelAssetDetailsDrawer: React.FC<ModelAssetDetailsDrawerProps> = (
     }
   };
 
-  // --- 3. 辅助组件 ---
   const DetailRow = ({ label, value, mono = false, icon: Icon }: any) => (
     <div className="flex justify-between py-3.5 border-b border-slate-50 last:border-0 items-center">
       <div className="flex items-center gap-2.5">
         {Icon && <Icon size={14} className="text-slate-300" />}
         <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{label}</span>
       </div>
-      <span className={`text-xs font-bold ${mono ? 'font-mono text-slate-600' : 'text-slate-800'}`}>{value}</span>
+      <span className={`text-xs font-bold truncate max-w-[200px] ${mono ? 'font-mono text-slate-600' : 'text-slate-800'}`}>{value}</span>
     </div>
   );
 
-  // --- 4. 安全退出：确保 Hooks 已全部初始化 ---
   if (!model) return null;
 
   return (
@@ -167,28 +163,30 @@ export const ModelAssetDetailsDrawer: React.FC<ModelAssetDetailsDrawerProps> = (
         <div className="min-h-[400px]">
            {activeTab === 'overview' && (
               <div className="space-y-8 animate-in fade-in duration-500">
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="space-y-6">
-                       <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em] flex items-center gap-2">
-                          <Info size={16} className="text-primary-600" /> 核心元数据 (METADATA)
-                       </h4>
-                       <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm divide-y divide-slate-50">
-                          <DetailRow label="资产名称" value={model.displayName} icon={Command} />
-                          <DetailRow label="内部标识符" value={model.name} mono icon={Terminal} />
-                          <DetailRow label="架构体系" value={model.framework} icon={Layers} />
-                          <DetailRow label="所属团队" value={model.owner} icon={User} />
-                          <DetailRow label="存储后端" value={model.storageType || 'S3 (Internal)'} icon={Database} />
-                          <DetailRow label="Python 环境" value={model.pythonVersion || '3.9.x'} mono icon={FileCode} />
-                       </div>
+                 <div className="space-y-6">
+                    <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em] flex items-center gap-2">
+                       <Info size={16} className="text-primary-600" /> 核心元数据矩阵 (METADATA MATRIX)
+                    </h4>
+                    <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-2">
+                       <DetailRow label="资产名称" value={model.displayName} icon={Command} />
+                       <DetailRow label="内部标识符" value={model.name} mono icon={Terminal} />
+                       <DetailRow label="架构体系" value={model.framework} icon={Layers} />
+                       <DetailRow label="所属团队" value={model.owner} icon={User} />
+                       <DetailRow label="存储后端" value={model.storageType || 'S3 (Internal)'} icon={Database} />
+                       <DetailRow label="Python 环境" value={model.pythonVersion || '3.9.x'} mono icon={FileCode} />
+                       <DetailRow label="最新发布版本" value={model.latestVersion} mono icon={GitBranch} />
+                       <DetailRow label="注册时间" value={model.createdAt} icon={Clock} />
                     </div>
-                    <div className="space-y-6">
-                       <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em] flex items-center gap-2">
-                          <TrendingUp size={16} className="text-primary-600" /> 性能演变曲线 (PERFORMANCE)
-                       </h4>
-                       <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
-                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-6">Aggregate Inference Latency (ms)</p>
-                          <MonitoringChart data={MOCK_MONITORING_HISTORY.cpu.map(p => ({...p, value: 40 + Math.random()*20}))} color="#1B58F4" label="Latency" height={160} />
-                       </div>
+                 </div>
+
+                 <div className="space-y-6">
+                    <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em] flex items-center gap-2">
+                       <FileText size={16} className="text-primary-600" /> 资产审计描述 (DESCRIPTION)
+                    </h4>
+                    <div className="bg-slate-50 border border-slate-200 rounded-3xl p-8 shadow-inner">
+                       <p className="text-sm text-slate-600 leading-relaxed font-medium">
+                          {model.description || '暂无该资产的详细业务背景及技术参数描述。请联系管理员完善审计元数据以满足企业合规性要求。'}
+                       </p>
                     </div>
                  </div>
 
@@ -218,7 +216,7 @@ export const ModelAssetDetailsDrawer: React.FC<ModelAssetDetailsDrawerProps> = (
                     </button>
                  </div>
 
-                 <div className="space-y-4">
+                 <div className="space-y-5">
                     {(model.versions || [
                       {
                         version: model.latestVersion, 
@@ -235,93 +233,94 @@ export const ModelAssetDetailsDrawer: React.FC<ModelAssetDetailsDrawerProps> = (
                     ]).map((v: any, idx: number) => {
                        const statusCfg = getStatusConfig(v.status || 'stable');
                        return (
-                          <div key={idx} className="group bg-white border border-slate-200 rounded-[32px] p-8 hover:border-primary-400 hover:shadow-2xl transition-all duration-500">
-                             <div className="flex flex-col lg:flex-row justify-between gap-8">
-                                <div className="flex-1 space-y-6">
-                                   <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-4">
-                                         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 border ${idx === 0 ? 'bg-primary-600 text-white shadow-lg' : 'bg-slate-50 text-slate-400'}`}>
-                                            <GitBranch size={22} strokeWidth={2.5} />
-                                         </div>
-                                         <div className="space-y-1">
-                                            <div className="flex items-center gap-3">
-                                               <span className="text-xl font-black text-slate-900 font-mono tracking-tight">{v.version}</span>
-                                               {idx === 0 && <span className="px-2 py-0.5 bg-primary-100 text-primary-700 text-[8px] font-black uppercase rounded tracking-widest">Latest</span>}
-                                            </div>
-                                            <div className="flex items-center gap-3">
-                                               <Badge status={statusCfg.variant} showDot>{statusCfg.label}</Badge>
-                                               <div className="w-1 h-1 rounded-full bg-slate-200"></div>
-                                               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1"><Clock size={11}/> {v.date}</span>
-                                            </div>
-                                         </div>
-                                      </div>
-                                   </div>
-
-                                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 p-5 bg-slate-50/50 rounded-2xl border border-slate-100">
-                                      <div className="space-y-1">
-                                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">参数规模 (PARAMS)</p>
-                                         <p className="text-sm font-black text-slate-800 font-mono">{v.params || 'N/A'}</p>
+                          <div key={idx} className="group bg-white border border-slate-200 rounded-[28px] p-0 hover:border-primary-400 hover:shadow-2xl transition-all duration-500 overflow-hidden flex flex-col md:flex-row">
+                             {/* Left Content Area */}
+                             <div className="flex-1 p-7 space-y-7">
+                                <div className="flex items-center justify-between">
+                                   <div className="flex items-center gap-4">
+                                      <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-500 border ${idx === 0 ? 'bg-primary-600 text-white shadow-lg' : 'bg-slate-50 text-slate-400'}`}>
+                                         <GitBranch size={20} strokeWidth={2.5} />
                                       </div>
                                       <div className="space-y-1">
-                                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">文件大小</p>
-                                         <p className="text-sm font-black text-slate-800 font-mono">{v.size}</p>
-                                      </div>
-                                      <div className="space-y-1">
-                                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><DownloadCloud size={10} className="text-primary-500" /> 总下载量</p>
-                                         <p className="text-sm font-black text-slate-800 font-mono">{v.downloads || '0'}</p>
-                                      </div>
-                                      <div className="space-y-1">
-                                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">性能指标 (SOTA)</p>
-                                         <div className="flex items-center gap-2">
-                                            <Gauge size={12} className="text-primary-500" />
-                                            <p className="text-sm font-black text-slate-800 font-mono">{v.metrics || 'Evaluated 92.5%'}</p>
+                                         <div className="flex items-center gap-3">
+                                            <span className="text-lg font-black text-slate-900 font-mono tracking-tight leading-none">{v.version}</span>
+                                            {idx === 0 && <span className="px-1.5 py-0.5 bg-primary-100 text-primary-700 text-[8px] font-black uppercase rounded tracking-widest">Latest</span>}
                                          </div>
-                                      </div>
-                                   </div>
-
-                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                      <div className="space-y-2">
-                                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1.5">
-                                            <Link size={10} className="text-primary-500" /> 存储后端路径 (SOURCE_URI)
-                                         </p>
-                                         <div className="group/path relative">
-                                            <div className="w-full px-4 py-3 bg-slate-900 rounded-xl text-[11px] font-mono font-bold text-primary-300 break-all border border-slate-800 pr-10 shadow-inner">
-                                               {v.path || `s3://internal-registry/models/${model.name}/${v.version}/weights.safetensors`}
-                                            </div>
-                                            <button 
-                                               onClick={() => handleCopyPath(v.path || 's3://...')}
-                                               className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-500 hover:text-white transition-all"
-                                            >
-                                               {copiedId === v.path ? <CheckCircle2 size={13} className="text-emerald-500" /> : <Copy size={13} />}
-                                            </button>
-                                         </div>
-                                      </div>
-
-                                      <div className="space-y-2">
-                                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center justify-between">
-                                            <span className="flex items-center gap-1.5"><Terminal size={10} className="text-indigo-500" /> 容器挂载目标路径 (MOUNT_PATH)</span>
-                                            <Badge status={v.mountPathSource === 'custom' ? 'warning' : 'primary'} showDot={false}>{v.mountPathSource?.toUpperCase() || 'DEFAULT'}</Badge>
-                                         </p>
-                                         <div className="group/mount relative">
-                                            <div className="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl text-[11px] font-mono font-bold text-slate-600 break-all pr-10 shadow-inner">
-                                               {v.mountPath || `/mnt/models/${model.name}/${v.version}`}
-                                            </div>
-                                            <button 
-                                               onClick={() => handleCopyPath(v.mountPath || '/mnt/models/...')}
-                                               className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-primary-600 transition-all"
-                                            >
-                                               {copiedId === v.mountPath ? <CheckCircle2 size={13} className="text-emerald-500" /> : <Copy size={13} />}
-                                            </button>
+                                         <div className="flex items-center gap-2.5">
+                                            <Badge status={statusCfg.variant} showDot>{statusCfg.label}</Badge>
+                                            <div className="w-1 h-1 rounded-full bg-slate-200"></div>
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><Clock size={11}/> {v.date}</span>
                                          </div>
                                       </div>
                                    </div>
                                 </div>
 
-                                <div className="lg:w-40 flex flex-col gap-3 justify-center border-t lg:border-t-0 lg:border-l border-slate-100 pt-6 lg:pt-0 lg:pl-8">
-                                   <button className="w-full py-3 bg-slate-950 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-600 transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2">
-                                      <Rocket size={14} /> 一键部署 (DEPLOY)
-                                   </button>
+                                {/* Matrix with better spacing */}
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                   {[
+                                      { label: '参数规模', val: v.params || 'N/A', icon: Layers },
+                                      { label: '文件大小', val: v.size, icon: Database },
+                                      { label: '累计下载', val: v.downloads || '0', icon: DownloadCloud },
+                                      { label: 'SOTA 指标', val: v.metrics || '92.5%', icon: Gauge }
+                                   ].map((item, i) => (
+                                      <div key={i} className="p-3.5 bg-slate-50 border border-slate-100/80 rounded-2xl group-hover:bg-white group-hover:border-primary-100 transition-all flex flex-col gap-1">
+                                         <div className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                                            <item.icon size={10} className="text-primary-500" /> {item.label}
+                                         </div>
+                                         <p className="text-[11px] font-black text-slate-800 font-mono leading-none mt-1">{item.val}</p>
+                                      </div>
+                                   ))}
                                 </div>
+
+                                {/* Paths with industrial design */}
+                                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                                   <div className="space-y-2">
+                                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1.5">
+                                         <Link size={10} className="text-primary-500" /> SOURCE_URI (存储后端)
+                                      </p>
+                                      <div className="group/path relative bg-slate-900 rounded-xl border border-slate-800 p-3 pr-10 overflow-hidden">
+                                         <div className="text-[10px] font-mono font-bold text-primary-300 truncate">
+                                            {v.path || `s3://internal-registry/models/${model.name}/${v.version}/weights.safetensors`}
+                                         </div>
+                                         <button 
+                                            onClick={() => handleCopyPath(v.path || 's3://...')}
+                                            className="absolute right-0 top-0 bottom-0 px-3 bg-slate-800/80 text-slate-400 hover:text-white transition-all border-l border-white/5"
+                                         >
+                                            {copiedId === v.path ? <CheckCircle2 size={13} className="text-emerald-500" /> : <Copy size={13} />}
+                                         </button>
+                                      </div>
+                                   </div>
+
+                                   <div className="space-y-2">
+                                      <div className="flex justify-between items-center px-1">
+                                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                            <Terminal size={10} className="text-indigo-500" /> MOUNT_PATH (容器挂载)
+                                         </p>
+                                         <span className={`text-[8px] font-black px-1.5 rounded uppercase tracking-tighter ${v.mountPathSource === 'custom' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
+                                            {v.mountPathSource || 'DEFAULT'}
+                                         </span>
+                                      </div>
+                                      <div className="group/mount relative bg-slate-50 rounded-xl border border-slate-200 p-3 pr-10 overflow-hidden">
+                                         <div className="text-[10px] font-mono font-bold text-slate-600 truncate">
+                                            {v.mountPath || `/mnt/models/${model.name}/${v.version}`}
+                                         </div>
+                                         <button 
+                                            onClick={() => handleCopyPath(v.mountPath || '/mnt/models/...')}
+                                            className="absolute right-0 top-0 bottom-0 px-3 bg-slate-200/50 text-slate-400 hover:text-primary-600 transition-all border-l border-slate-200"
+                                         >
+                                            {copiedId === v.mountPath ? <CheckCircle2 size={13} className="text-emerald-500" /> : <Copy size={13} />}
+                                         </button>
+                                      </div>
+                                   </div>
+                                </div>
+                             </div>
+
+                             {/* Right Action Area - Vertically Centered and Fixed Width */}
+                             <div className="w-full md:w-44 flex items-center justify-center p-6 bg-slate-50/30 border-t md:border-t-0 md:border-l border-slate-100">
+                                <button className="w-full py-3.5 bg-slate-950 text-white rounded-xl text-[10px] font-black uppercase tracking-[0.15em] hover:bg-primary-600 transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2.5 shrink-0 group/btn">
+                                   <Rocket size={16} strokeWidth={2.5} className="shrink-0 group-hover:-translate-y-0.5 transition-transform" /> 
+                                   <span className="whitespace-nowrap">一键部署</span>
+                                </button>
                              </div>
                           </div>
                        );
