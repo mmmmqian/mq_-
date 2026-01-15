@@ -6,16 +6,14 @@ import {
   Box, GitBranch, Settings, History, 
   Terminal, ShieldCheck, Database, 
   Activity, Clock, Layers, User,
-  FileCode, Zap, Rocket, Download,
-  CheckCircle2, AlertCircle, Info,
-  TrendingUp, BarChart3, LineChart,
-  Lock, Share2, Globe, Command, Trash2,
-  Plus, Copy, Link, Gauge, MousePointer2,
-  ChevronRight, FileJson, FolderSync,
-  DownloadCloud, BarChart, FileText
+  FileCode, Zap, Rocket,
+  CheckCircle2, Info,
+  TrendingUp, BarChart3,
+  Lock, Globe, Command,
+  Plus, Copy, Link, Gauge,
+  ChevronRight, DownloadCloud
 } from 'lucide-react';
 import MonitoringChart from '../ui/MonitoringChart';
-import { MOCK_MONITORING_HISTORY } from '../../constants';
 import { PublishModelVersionModal } from './PublishModelVersionModal';
 
 interface ModelAssetDetailsDrawerProps {
@@ -96,9 +94,8 @@ export const ModelAssetDetailsDrawer: React.FC<ModelAssetDetailsDrawerProps> = (
 
       <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 pb-6">
         
-        {/* Header Hero */}
         <div className="bg-slate-950 rounded-[32px] p-8 border border-slate-800 relative overflow-hidden shadow-2xl group">
-           <div className="absolute top-0 right-0 p-10 opacity-[0.03] text-white pointer-events-none group-hover:opacity-[0.08] transition-opacity duration-700">
+           <div className="absolute top-0 right-0 p-10 opacity-5 text-white pointer-events-none group-hover:opacity-0.08 transition-opacity duration-700">
               <Box size={240} strokeWidth={1} />
            </div>
            <div className="relative z-10">
@@ -141,11 +138,10 @@ export const ModelAssetDetailsDrawer: React.FC<ModelAssetDetailsDrawerProps> = (
            </div>
         </div>
 
-        {/* Navigation Tabs */}
         <div className="flex border-b border-slate-200 sticky top-0 bg-white z-20">
            {[
               { id: 'overview', label: '运行概览', icon: Activity },
-              { id: 'versions', label: '版本矩阵 (Registry)', icon: GitBranch },
+              { id: 'versions', label: '版本矩阵', icon: GitBranch },
               { id: 'config', label: '配置定义', icon: Settings },
               { id: 'audit', label: '审计日志', icon: History }
            ].map(tab => (
@@ -179,17 +175,6 @@ export const ModelAssetDetailsDrawer: React.FC<ModelAssetDetailsDrawerProps> = (
                     </div>
                  </div>
 
-                 <div className="space-y-6">
-                    <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em] flex items-center gap-2">
-                       <FileText size={16} className="text-primary-600" /> 资产审计描述 (DESCRIPTION)
-                    </h4>
-                    <div className="bg-slate-50 border border-slate-200 rounded-3xl p-8 shadow-inner">
-                       <p className="text-sm text-slate-600 leading-relaxed font-medium">
-                          {model.description || '暂无该资产的详细业务背景及技术参数描述。请联系管理员完善审计元数据以满足企业合规性要求。'}
-                       </p>
-                    </div>
-                 </div>
-
                  <div className="bg-primary-50/50 border border-primary-100 p-6 rounded-[28px] flex gap-4">
                     <ShieldCheck size={24} className="text-primary-600 shrink-0" />
                     <div>
@@ -210,31 +195,17 @@ export const ModelAssetDetailsDrawer: React.FC<ModelAssetDetailsDrawerProps> = (
                     </h4>
                     <button 
                        onClick={() => setIsPublishModalOpen(true)}
-                       className="flex items-center gap-2 px-5 py-2.5 bg-slate-950 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-600 transition-all active:scale-95 shadow-xl shadow-slate-900/10"
+                       className="flex items-center gap-2 px-5 py-2.5 bg-slate-950 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-600 transition-all shadow-xl shadow-slate-900/10"
                     >
-                       <Plus size={14} strokeWidth={3} /> 发布新版本 (COMMIT)
+                       <Plus size={14} strokeWidth={3} /> 发布新版本
                     </button>
                  </div>
 
                  <div className="space-y-5">
-                    {(model.versions || [
-                      {
-                        version: model.latestVersion, 
-                        date: model.createdAt, 
-                        size: model.size, 
-                        status: 'stable',
-                        downloads: '842',
-                        params: '7B',
-                        metrics: 'Accuracy: 94.2%',
-                        path: `s3://models/${model.name}/${model.latestVersion}/weights.bin`,
-                        mountPath: `/mnt/models/${model.name}/${model.latestVersion}`,
-                        mountPathSource: 'default'
-                      }
-                    ]).map((v: any, idx: number) => {
+                    {(model.versions || []).map((v: any, idx: number) => {
                        const statusCfg = getStatusConfig(v.status || 'stable');
                        return (
                           <div key={idx} className="group bg-white border border-slate-200 rounded-[28px] p-0 hover:border-primary-400 hover:shadow-2xl transition-all duration-500 overflow-hidden flex flex-col md:flex-row">
-                             {/* Left Content Area */}
                              <div className="flex-1 p-7 space-y-7">
                                 <div className="flex items-center justify-between">
                                    <div className="flex items-center gap-4">
@@ -254,8 +225,6 @@ export const ModelAssetDetailsDrawer: React.FC<ModelAssetDetailsDrawerProps> = (
                                       </div>
                                    </div>
                                 </div>
-
-                                {/* Matrix with better spacing */}
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                    {[
                                       { label: '参数规模', val: v.params || 'N/A', icon: Layers },
@@ -271,54 +240,36 @@ export const ModelAssetDetailsDrawer: React.FC<ModelAssetDetailsDrawerProps> = (
                                       </div>
                                    ))}
                                 </div>
-
-                                {/* Paths with industrial design */}
                                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                                    <div className="space-y-2">
                                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1.5">
-                                         <Link size={10} className="text-primary-500" /> SOURCE_URI (存储后端)
+                                         <Link size={10} className="text-primary-500" /> SOURCE_URI
                                       </p>
                                       <div className="group/path relative bg-slate-900 rounded-xl border border-slate-800 p-3 pr-10 overflow-hidden">
-                                         <div className="text-[10px] font-mono font-bold text-primary-300 truncate">
-                                            {v.path || `s3://internal-registry/models/${model.name}/${v.version}/weights.safetensors`}
-                                         </div>
-                                         <button 
-                                            onClick={() => handleCopyPath(v.path || 's3://...')}
-                                            className="absolute right-0 top-0 bottom-0 px-3 bg-slate-800/80 text-slate-400 hover:text-white transition-all border-l border-white/5"
-                                         >
+                                         <div className="text-[10px] font-mono font-bold text-primary-300 truncate">{v.path}</div>
+                                         <button onClick={() => handleCopyPath(v.path)} className="absolute right-0 top-0 bottom-0 px-3 bg-slate-800/80 text-slate-400 hover:text-white transition-all border-l border-white/5">
                                             {copiedId === v.path ? <CheckCircle2 size={13} className="text-emerald-500" /> : <Copy size={13} />}
                                          </button>
                                       </div>
                                    </div>
-
                                    <div className="space-y-2">
                                       <div className="flex justify-between items-center px-1">
                                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                                            <Terminal size={10} className="text-indigo-500" /> MOUNT_PATH (容器挂载)
+                                            <Terminal size={10} className="text-indigo-500" /> MOUNT_PATH
                                          </p>
-                                         <span className={`text-[8px] font-black px-1.5 rounded uppercase tracking-tighter ${v.mountPathSource === 'custom' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
-                                            {v.mountPathSource || 'DEFAULT'}
-                                         </span>
                                       </div>
                                       <div className="group/mount relative bg-slate-50 rounded-xl border border-slate-200 p-3 pr-10 overflow-hidden">
-                                         <div className="text-[10px] font-mono font-bold text-slate-600 truncate">
-                                            {v.mountPath || `/mnt/models/${model.name}/${v.version}`}
-                                         </div>
-                                         <button 
-                                            onClick={() => handleCopyPath(v.mountPath || '/mnt/models/...')}
-                                            className="absolute right-0 top-0 bottom-0 px-3 bg-slate-200/50 text-slate-400 hover:text-primary-600 transition-all border-l border-slate-200"
-                                         >
+                                         <div className="text-[10px] font-mono font-bold text-slate-600 truncate">{v.mountPath}</div>
+                                         <button onClick={() => handleCopyPath(v.mountPath)} className="absolute right-0 top-0 bottom-0 px-3 bg-slate-200/50 text-slate-400 hover:text-primary-600 transition-all border-l border-slate-200">
                                             {copiedId === v.mountPath ? <CheckCircle2 size={13} className="text-emerald-500" /> : <Copy size={13} />}
                                          </button>
                                       </div>
                                    </div>
                                 </div>
                              </div>
-
-                             {/* Right Action Area - Vertically Centered and Fixed Width */}
                              <div className="w-full md:w-44 flex items-center justify-center p-6 bg-slate-50/30 border-t md:border-t-0 md:border-l border-slate-100">
-                                <button className="w-full py-3.5 bg-slate-950 text-white rounded-xl text-[10px] font-black uppercase tracking-[0.15em] hover:bg-primary-600 transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2.5 shrink-0 group/btn">
-                                   <Rocket size={16} strokeWidth={2.5} className="shrink-0 group-hover:-translate-y-0.5 transition-transform" /> 
+                                <button className="w-full py-3.5 bg-slate-950 text-white rounded-xl text-[10px] font-black uppercase tracking-[0.15em] hover:bg-primary-600 transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2.5">
+                                   <Rocket size={16} strokeWidth={2.5} /> 
                                    <span className="whitespace-nowrap">一键部署</span>
                                 </button>
                              </div>
@@ -353,15 +304,10 @@ resource_allocation:
 
 runtime_env:
   cuda_version: 12.1
-  python: 3.9
-  dependencies:
-    - transformers>=4.31.0
-    - accelerate>=0.21.0
-    - flash-attn>=2.0.0`}
+  python: 3.9`}
                        </pre>
                     </div>
                  </div>
-
                  <div className="space-y-4 pt-4">
                     <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em] flex items-center gap-2">
                        <Lock size={16} className="text-amber-500" /> 访问策略 (ACL)
@@ -370,11 +316,11 @@ runtime_env:
                        <div className="flex items-center gap-5">
                           <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 border border-slate-100"><Globe size={24}/></div>
                           <div>
-                             <p className="text-[12px] font-black text-slate-900 uppercase">组织级共享 (Organization-Wide)</p>
+                             <p className="text-[12px] font-black text-slate-900 uppercase">组织级共享</p>
                              <p className="text-[10px] text-slate-500 mt-1 font-medium">该模型目前对全组织成员可见，允许跨项目引用与微调。</p>
                           </div>
                        </div>
-                       <button className="px-5 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-50 hover:text-primary-600 transition-all border border-transparent hover:border-primary-100">
+                       <button className="px-5 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-50 transition-all border border-transparent">
                           变更授权策略
                        </button>
                     </div>
@@ -391,7 +337,6 @@ runtime_env:
                     {[
                        { time: '2024-05-24 14:15:02', user: 'zhangsan', action: 'PUBLISH_NEW_VERSION', detail: `Release ${model.latestVersion} to registry`, icon: Rocket, color: 'text-emerald-500' },
                        { time: '2024-05-22 10:30:45', user: 'zhangsan', action: 'UPDATE_CONFIG', detail: 'Modified VRAM budget to 12GB', icon: Settings, color: 'text-primary-500' },
-                       { time: '2024-05-20 09:15:12', user: 'sys-orchestrator', action: 'SCAN_COMPLETE', detail: 'Vulnerability scan PASSED', icon: ShieldCheck, color: 'text-emerald-500' },
                        { time: '2024-05-18 16:45:00', user: 'zhangsan', action: 'REGISTER_ASSET', detail: `Onboarding model ${model.name}`, icon: Box, color: 'text-slate-400' }
                     ].map((log, i) => (
                        <div key={i} className="flex gap-6 px-8 py-5 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 items-start">
