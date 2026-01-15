@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Drawer } from '../ui/Drawer';
-import { Layers, Server, Cpu, Database, Save, CheckCircle2, ChevronRight, AlertCircle, Power, ShieldAlert } from 'lucide-react';
+import { Layers, Server, Cpu, Database, Save, CheckCircle2, ChevronRight, AlertCircle, Power, ShieldAlert, Zap, Box } from 'lucide-react';
 import { MOCK_CLUSTERS, MOCK_NODE_DETAILS } from '../../constants';
 
 interface ManageResourcePoolModalProps {
@@ -52,6 +52,22 @@ export const ManageResourcePoolModal: React.FC<ManageResourcePoolModalProps> = (
         setStep(1);
     }
   }, [isOpen, initialData]);
+
+  // 计算已选节点资源汇总
+  const selectedResourcesSummary = useMemo(() => {
+    if (!formData.clusterId || formData.nodeSelector.length === 0) return null;
+    
+    const clusterNodes = MOCK_NODE_DETAILS[formData.clusterId] || [];
+    const selectedNodes = clusterNodes.filter(node => formData.nodeSelector.includes(node.name));
+    
+    return selectedNodes.reduce((acc, node) => ({
+      count: acc.count + 1,
+      cpu: acc.cpu + (node.cpu?.total || 0),
+      mem: acc.mem + (node.mem?.total || 0),
+      gpu: acc.gpu + (node.gpu?.count || 0),
+      storage: acc.storage + (node.storage?.total || 0)
+    }), { count: 0, cpu: 0, mem: 0, gpu: 0, storage: 0 });
+  }, [formData.clusterId, formData.nodeSelector]);
 
   const handleClusterSelect = (clusterId: string) => {
     if (formData.clusterId !== clusterId) {
@@ -249,47 +265,91 @@ export const ManageResourcePoolModal: React.FC<ManageResourcePoolModalProps> = (
 
                 {/* Node Selection */}
                 {formData.clusterId && (
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 ml-1">
                             纳管节点阵列 (NODES: {formData.nodeSelector.length}) <span className="text-red-500">*</span>
                         </label>
-                        <div className="bg-slate-50/50 rounded-2xl border border-slate-200 overflow-hidden max-h-[300px] overflow-y-auto">
-                            {MOCK_NODE_DETAILS[formData.clusterId]?.map(node => (
-                                <div 
-                                    key={node.name}
-                                    onClick={() => toggleNode(node.name)}
-                                    className={`flex items-center justify-between px-5 py-4 border-b border-slate-100 last:border-0 cursor-pointer hover:bg-white transition-all group ${
-                                        formData.nodeSelector.includes(node.name) ? 'bg-primary-50/20' : ''
-                                    }`}
-                                >
-                                    <div className="flex items-center gap-4">
-                                        <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all ${
-                                            formData.nodeSelector.includes(node.name) 
-                                            ? 'bg-primary-600 border-primary-600 shadow-md' 
-                                            : 'bg-white border-slate-300 group-hover:border-primary-400'
-                                        }`}>
-                                            {formData.nodeSelector.includes(node.name) && <CheckCircle2 size={14} className="text-white" />}
+                        
+                        <div className="bg-slate-50/50 rounded-2xl border border-slate-200 overflow-hidden">
+                            <div className="max-h-[260px] overflow-y-auto">
+                                {MOCK_NODE_DETAILS[formData.clusterId]?.map(node => (
+                                    <div 
+                                        key={node.name}
+                                        onClick={() => toggleNode(node.name)}
+                                        className={`flex items-center justify-between px-5 py-4 border-b border-slate-100 last:border-0 cursor-pointer hover:bg-white transition-all group ${
+                                            formData.nodeSelector.includes(node.name) ? 'bg-primary-50/20' : ''
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all ${
+                                                formData.nodeSelector.includes(node.name) 
+                                                ? 'bg-primary-600 border-primary-600 shadow-md' 
+                                                : 'bg-white border-slate-300 group-hover:border-primary-400'
+                                            }`}>
+                                                {formData.nodeSelector.includes(node.name) && <CheckCircle2 size={14} className="text-white" />}
+                                            </div>
+                                            <div>
+                                                <div className="text-xs font-mono font-black text-slate-900 tracking-tight">{node.name}</div>
+                                                <div className="text-[10px] text-slate-400 font-mono font-bold mt-0.5">{node.ip}</div>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <div className="text-xs font-mono font-black text-slate-900 tracking-tight">{node.name}</div>
-                                            <div className="text-[10px] text-slate-400 font-mono font-bold mt-0.5">{node.ip}</div>
+                                        <div className="flex gap-2">
+                                            <span className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-[9px] font-black text-slate-500 uppercase tracking-widest">
+                                                {node.cpu.total}C / {node.mem.total}G
+                                            </span>
+                                            {node.gpu && (
+                                                <span className="px-2 py-1 bg-emerald-50 border border-emerald-100 rounded-lg text-[9px] font-black text-emerald-700 uppercase tracking-widest">
+                                                    GPU x{node.gpu.count}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
-                                    <div className="flex gap-2">
-                                        <span className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-[9px] font-black text-slate-500 uppercase tracking-widest">
-                                            {node.cpu.total}C / {node.mem.total}G
-                                        </span>
-                                        {node.gpu && (
-                                            <span className="px-2 py-1 bg-emerald-50 border border-emerald-100 rounded-lg text-[9px] font-black text-emerald-700 uppercase tracking-widest">
-                                                GPU x{node.gpu.count}
+                                ))}
+                                {(!MOCK_NODE_DETAILS[formData.clusterId] || MOCK_NODE_DETAILS[formData.clusterId].length === 0) && (
+                                    <div className="p-10 text-center text-[10px] font-black uppercase tracking-widest text-slate-300">暂无在线物理节点</div>
+                                )}
+                            </div>
+
+                            {/* 已选节点资源汇总展示 */}
+                            {selectedResourcesSummary && (
+                                <div className="bg-slate-900 border-t border-slate-800 p-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center text-white">
+                                                <Box size={16} />
+                                            </div>
+                                            <span className="text-[11px] font-black text-white uppercase tracking-widest">
+                                                已选 <span className="text-primary-400 font-mono text-sm">{selectedResourcesSummary.count}</span> 个节点资源汇总
                                             </span>
-                                        )}
+                                        </div>
+                                        <div className="flex flex-wrap items-center gap-y-2 gap-x-4">
+                                            <div className="flex items-center gap-1.5">
+                                                <Zap size={12} className="text-emerald-500" />
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase">GPU</span>
+                                                <span className="text-[11px] font-black font-mono text-white">{selectedResourcesSummary.gpu} 张</span>
+                                            </div>
+                                            <div className="h-3 w-px bg-slate-700 hidden sm:block"></div>
+                                            <div className="flex items-center gap-1.5">
+                                                <Cpu size={12} className="text-primary-500" />
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase">CPU</span>
+                                                <span className="text-[11px] font-black font-mono text-white">{selectedResourcesSummary.cpu} 核</span>
+                                            </div>
+                                            <div className="h-3 w-px bg-slate-700 hidden sm:block"></div>
+                                            <div className="flex items-center gap-1.5">
+                                                <Activity size={12} className="text-indigo-400" />
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase">内存</span>
+                                                <span className="text-[11px] font-black font-mono text-white">{selectedResourcesSummary.mem} GB</span>
+                                            </div>
+                                            <div className="h-3 w-px bg-slate-700 hidden sm:block"></div>
+                                            <div className="flex items-center gap-1.5">
+                                                <Database size={12} className="text-amber-500" />
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase">存储</span>
+                                                <span className="text-[11px] font-black font-mono text-white">{selectedResourcesSummary.storage} GB</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            ))}
-                             {(!MOCK_NODE_DETAILS[formData.clusterId] || MOCK_NODE_DETAILS[formData.clusterId].length === 0) && (
-                                <div className="p-10 text-center text-[10px] font-black uppercase tracking-widest text-slate-300">暂无在线物理节点</div>
-                             )}
+                            )}
                         </div>
                     </div>
                 )}
@@ -342,7 +402,7 @@ export const ManageResourcePoolModal: React.FC<ManageResourcePoolModalProps> = (
                     </div>
                     <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 ml-1">
-                            <Cpu size={14} className="text-emerald-500"/> GPU 配额 (Units)
+                            <Zap size={14} className="text-emerald-500"/> GPU 配额 (Units)
                         </label>
                         <input 
                             type="number" 
@@ -358,3 +418,21 @@ export const ManageResourcePoolModal: React.FC<ManageResourcePoolModalProps> = (
     </Drawer>
   );
 };
+
+// 模拟图标占位，补充从 constants 缺失的 Activity
+const Activity = (props: any) => (
+  <svg 
+    {...props}
+    xmlns="http://www.w3.org/2000/svg" 
+    width="24" 
+    height="24" 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round"
+  >
+    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+  </svg>
+);

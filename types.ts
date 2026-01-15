@@ -24,16 +24,53 @@ export interface NavItem {
   category?: string;
 }
 
+export interface ProjectQuota {
+  cpu: number;
+  cpuUsed: number;
+  gpu: number;
+  gpuUsed: number;
+  storage: number;
+  storageUsed: number;
+  memory: number;
+  memoryUsed: number;
+  npu?: number;
+  npuUsed?: number;
+}
+
+export interface ProjectMember {
+  userId: string;
+  userName: string;
+  realName: string;
+  role: 'admin' | 'algorithm' | 'developer' | 'scientist';
+  joinedAt: string;
+}
+
 export interface Project {
   id: string;
   name: string;
+  tenantId: string;
+  tenantName: string;
   owner: string;
   status: 'active' | 'frozen';
-  cpuQuota: number;
-  cpuUsed: number;
+  quota: ProjectQuota;
+  memberCount: number;
+  createdAt: string;
+  description?: string;
 }
 
-export type ModuleType = 'compute' | 'data' | 'training' | 'inference' | 'monitoring';
+export interface Tenant {
+  id: string;
+  name: string;
+  status: 'active' | 'disabled';
+  quota: ProjectQuota;
+  projectCount: number;
+  projectLimit: number;
+  userCount: number;
+  createdAt: string;
+  description?: string;
+}
+
+export type ModuleType = 'compute' | 'data' | 'training' | 'inference' | 'agents' | 'knowledge';
 
 export interface HeterogeneousResource {
   id: string;
@@ -109,4 +146,24 @@ export interface Task {
   nodeIp?: string;
   errorMessage?: string;
   logs?: string[];
+}
+
+export interface InferenceService {
+  id: string;
+  name: string;
+  modelName: string;
+  modelVersion: string;
+  status: 'running' | 'deploying' | 'failed' | 'stopped';
+  replicas: {
+    ready: number;
+    total: number;
+  };
+  endpoint: string;
+  protocol: 'HTTP' | 'gRPC';
+  cpu: string;
+  memory: string;
+  gpu: string;
+  owner: string;
+  createdAt: string;
+  uptime: string;
 }

@@ -4,7 +4,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI-Nex Cloud Platform</title>
+    <title>AI-Nex Cloud | Professional AI Orchestration</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <script>
@@ -17,21 +17,22 @@
             },
             colors: {
               primary: {
-                50: '#eef4ff',
-                100: '#dce8ff',
-                200: '#b6cfff',
-                300: '#84adff',
-                400: '#4d84ff',
-                500: '#1B58F4', // Brand Color
-                600: '#0f40d4',
-                700: '#0c32aa',
-                800: '#0e2b8a',
-                900: '#11256d',
-                950: '#0a1540',
+                50: '#f0f4ff',
+                100: '#dae3ff',
+                200: '#bdccff',
+                300: '#91acff',
+                400: '#5e82ff',
+                500: '#1B58F4',
+                600: '#003be5',
+                700: '#002eb8',
+                800: '#00279c',
+                900: '#06257d',
+                950: '#020d2e',
               },
               slate: {
-                850: '#151e2e', 
+                850: '#141c2d',
                 900: '#0f172a',
+                950: '#080c16',
               }
             },
             borderRadius: {
@@ -41,9 +42,12 @@
               'lg': '8px',
               'xl': '12px',
               '2xl': '16px',
+              '3xl': '24px',
+              '4xl': '32px',
             },
             boxShadow: {
-              'soft': '0 2px 10px rgba(0, 0, 0, 0.03)',
+              'rigorous': '0 0 0 1px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.02), 0 10px 15px -3px rgba(0, 0, 0, 0.03)',
+              'tech': '0 0 20px -5px rgba(27, 88, 244, 0.15)',
             }
           }
         }
@@ -52,30 +56,40 @@
     <style>
       body {
         background-color: #F8FAFC;
-        color: #1e293b;
+        color: #0f172a;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+        overflow-x: hidden;
       }
       /* Custom scrollbar */
       ::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
+        width: 5px;
+        height: 5px;
       }
       ::-webkit-scrollbar-track {
         background: transparent;
       }
       ::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
-        border-radius: 3px;
+        background: #e2e8f0;
+        border-radius: 10px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: #94a3b8;
+        background: #cbd5e1;
       }
       
-      .glass-panel {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
+      .tech-grid {
+        background-size: 40px 40px;
+        background-image: 
+          linear-gradient(to right, rgba(0, 0, 0, 0.02) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
+      }
+
+      @keyframes pulse-subtle {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+      }
+      .animate-pulse-subtle {
+        animation: pulse-subtle 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
       }
     </style>
   <script type="importmap">
@@ -90,8 +104,10 @@
   }
 }
 </script>
+<link rel="stylesheet" href="/index.css">
 </head>
-  <body>
+  <body class="tech-grid">
     <div id="root"></div>
-  </body>
+  <script type="module" src="/index.tsx"></script>
+</body>
 </html>
