@@ -6,7 +6,8 @@ import {
   Settings, Save, Info, ShieldCheck,
   FolderOpen, Activity, ChevronRight,
   Database, Terminal, ShieldAlert,
-  FlaskConical, AlertCircle, CheckCircle2
+  FlaskConical, AlertCircle, CheckCircle2,
+  BrainCircuit, UploadCloud
 } from 'lucide-react';
 import { Badge } from '../ui/Badge';
 
@@ -20,12 +21,12 @@ export const PublishModelVersionModal: React.FC<PublishModelVersionModalProps> =
   const [useDefaultPath, setUseDefaultPath] = useState(true);
   const [formData, setFormData] = useState({
     version: '',
-    status: 'stable', // 新增：版本状态
+    status: 'stable',
+    source: 'training', // 新增：来源字段，默认训练产出
     mountPath: '',
     sourcePath: ''
   });
 
-  // 当模型变化或路径策略变化时，更新默认挂载路径
   useEffect(() => {
     if (model && useDefaultPath) {
       setFormData(prev => ({
@@ -74,7 +75,7 @@ export const PublishModelVersionModal: React.FC<PublishModelVersionModalProps> =
       }
     >
       <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-        {/* Model Identifier Context (Read-only) */}
+        {/* Model Identifier Context */}
         <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-3">
            <div className="flex justify-between items-center">
               <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">所属模型资产 (ASSET_SCOPE)</span>
@@ -92,10 +93,35 @@ export const PublishModelVersionModal: React.FC<PublishModelVersionModalProps> =
         </div>
 
         <div className="space-y-6">
+          {/* 来源选择 */}
+          <div className="space-y-3">
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-2">
+               <Activity size={12} className="text-primary-500" /> 模型产出来源 (PROVENANCE)
+            </label>
+            <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200 shadow-inner">
+               <button
+                 type="button"
+                 onClick={() => setFormData({...formData, source: 'training'})}
+                 className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black transition-all ${formData.source === 'training' ? 'bg-white text-indigo-600 shadow-md ring-1 ring-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
+               >
+                  <BrainCircuit size={14} strokeWidth={2.5} />
+                  训练产出
+               </button>
+               <button
+                 type="button"
+                 onClick={() => setFormData({...formData, source: 'manual'})}
+                 className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black transition-all ${formData.source === 'manual' ? 'bg-white text-amber-600 shadow-md ring-1 ring-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
+               >
+                  <UploadCloud size={14} strokeWidth={2.5} />
+                  手动上传
+               </button>
+            </div>
+          </div>
+
           {/* 版本号 */}
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-2">
-               <Activity size={12} className="text-primary-500" /> 版本迭代号 (SEMVER) <span className="text-red-500">*</span>
+               <Settings size={12} className="text-primary-500" /> 版本迭代号 (SEMVER) <span className="text-red-500">*</span>
             </label>
             <input 
               type="text" 
@@ -106,16 +132,16 @@ export const PublishModelVersionModal: React.FC<PublishModelVersionModalProps> =
             />
           </div>
 
-          {/* 新增字段：版本状态 */}
+          {/* 版本状态 */}
           <div className="space-y-3">
             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-2">
                <ShieldCheck size={12} className="text-primary-500" /> 版本生命周期状态
             </label>
             <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200 shadow-inner">
                {[
-                 { id: 'stable', label: '稳定 (STABLE)', color: 'text-emerald-600', activeBg: 'bg-white', dot: 'bg-emerald-500' },
-                 { id: 'experimental', label: '实验 (BETA)', color: 'text-amber-600', activeBg: 'bg-white', dot: 'bg-amber-500' },
-                 { id: 'deprecated', label: '弃用 (EOL)', color: 'text-slate-500', activeBg: 'bg-white', dot: 'bg-slate-400' }
+                 { id: 'stable', label: '稳定', color: 'text-emerald-600', activeBg: 'bg-white', dot: 'bg-emerald-500' },
+                 { id: 'experimental', label: '实验', color: 'text-amber-600', activeBg: 'bg-white', dot: 'bg-amber-500' },
+                 { id: 'deprecated', label: '弃用', color: 'text-slate-500', activeBg: 'bg-white', dot: 'bg-slate-400' }
                ].map(status => (
                   <button
                     key={status.id}
@@ -128,37 +154,6 @@ export const PublishModelVersionModal: React.FC<PublishModelVersionModalProps> =
                   </button>
                ))}
             </div>
-          </div>
-
-          {/* 容器挂载路径 */}
-          <div className="space-y-3">
-            <div className="flex justify-between items-center px-1">
-               <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                  <Terminal size={12} className="text-primary-500" /> 容器挂载目标路径
-               </label>
-               <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
-                  <button 
-                    onClick={() => setUseDefaultPath(true)}
-                    className={`px-3 py-1 text-[9px] font-black rounded-md transition-all ${useDefaultPath ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                  >
-                    DEFAULT
-                  </button>
-                  <button 
-                    onClick={() => setUseDefaultPath(false)}
-                    className={`px-3 py-1 text-[9px] font-black rounded-md transition-all ${!useDefaultPath ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                  >
-                    CUSTOM
-                  </button>
-               </div>
-            </div>
-            <input 
-              type="text" 
-              readOnly={useDefaultPath}
-              value={formData.mountPath}
-              onChange={(e) => setFormData({...formData, mountPath: e.target.value})}
-              placeholder="/mnt/custom/path"
-              className={`w-full px-4 py-3 text-xs border rounded-xl outline-none transition-all font-mono font-bold ${useDefaultPath ? 'bg-slate-100/50 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-white border-slate-200 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/5'}`}
-            />
           </div>
 
           {/* 模型源路径 */}
@@ -185,7 +180,7 @@ export const PublishModelVersionModal: React.FC<PublishModelVersionModalProps> =
            <div className="space-y-1">
               <h6 className="text-[10px] font-black text-primary-900 uppercase tracking-widest">操作审计声明</h6>
               <p className="text-[10px] text-primary-800/80 font-bold leading-relaxed uppercase tracking-tighter">
-                发布后，系统将自动锁定存储路径并计算 SHA256 校验和。设置为“稳定”状态的版本将优先推荐给生产环境的推理服务进行平滑升级。
+                来源标识将直接影响资产的审计权重。训练产出的版本将关联其训练 Job 的 Trace ID，手动上传版本需通过完整的合规扫描。
               </p>
            </div>
         </div>

@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { 
   Rocket, Search, Plus, RefreshCw, Activity, Globe, Terminal, 
@@ -18,7 +17,12 @@ import PageHeader from '../../components/layout/PageHeader';
 import { Drawer } from '../../components/ui/Drawer';
 import MonitoringChart from '../../components/ui/MonitoringChart';
 
-type AuditTab = 'overview' | 'telemetry' | 'access' | 'specs';
+// 更新 AuditTab 类型
+type AuditTab = 'overview' | 'telemetry' | 'specs';
+
+interface OnlineServicesProps {
+  navigate?: (module: any, page: string, data?: any) => void;
+}
 
 const getStatusConfig = (status: string) => {
   switch (status) {
@@ -30,7 +34,7 @@ const getStatusConfig = (status: string) => {
   }
 };
 
-const OnlineServicesPage: React.FC = () => {
+const OnlineServicesPage: React.FC<OnlineServicesProps> = ({ navigate }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -53,33 +57,58 @@ const OnlineServicesPage: React.FC = () => {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  // Fix: Added missing handleDownloadLogs function to handle log exports
+  const handleDownloadLogs = () => {
+    if (!selectedService) return;
+    alert(`正在对服务 [${selectedService.name}] 的日志进行归档导出...\n文件格式: .log.gz`);
+  };
+
   const handleAction = (id: string, action: 'start' | 'stop' | 'restart' | 'audit' | 'monitor' | 'experience') => {
     const service = services.find(s => s.id === id);
     if (!service) return;
 
-    setSelectedService(service);
-
-    switch (action) {
-      case 'audit':
+    // 确保操作时更新详情页引用的对象
+    if (action === 'audit') {
+        setSelectedService(service);
         setActiveTab('overview');
         setIsAuditOpen(true);
-        break;
-      case 'monitor':
+        return;
+    }
+
+    if (action === 'monitor') {
+        setSelectedService(service);
         setActiveTab('telemetry');
         setIsAuditOpen(true);
-        break;
-      case 'experience':
-        alert(`正在接入 [${service.modelName}] 的交互沙盒环境...`);
-        break;
+        return;
+    }
+
+    if (action === 'experience') {
+        if (navigate) {
+          navigate('inference', 'inference-playground', { service });
+        }
+        return;
+    }
+
+    switch (action) {
       case 'stop':
         setStoppingService(service);
         setIsStopConfirmOpen(true);
         break;
       case 'start':
       case 'restart':
-        setServices(prev => prev.map(s => s.id === id ? { ...s, status: 'deploying' as any } : s));
+        setServices(prev => {
+            const next = prev.map(s => s.id === id ? { ...s, status: 'deploying' as any } : s);
+            const updated = next.find(s => s.id === id);
+            if (selectedService?.id === id) setSelectedService(updated);
+            return next;
+        });
         setTimeout(() => {
-          setServices(prev => prev.map(s => s.id === id ? { ...s, status: 'running' as any } : s));
+          setServices(prev => {
+              const next = prev.map(s => s.id === id ? { ...s, status: 'running' as any } : s);
+              const updated = next.find(s => s.id === id);
+              if (selectedService?.id === id) setSelectedService(updated);
+              return next;
+          });
         }, 1500);
         break;
     }
@@ -87,18 +116,40 @@ const OnlineServicesPage: React.FC = () => {
 
   const confirmStopService = () => {
     if (!stoppingService) return;
-    setServices(prev => prev.map(s => s.id === stoppingService.id ? { ...s, status: 'stopped' as any } : s));
+    setServices(prev => {
+        const next = prev.map(s => s.id === stoppingService.id ? { ...s, status: 'stopped' as any } : s);
+        if (selectedService?.id === stoppingService.id) {
+            setSelectedService(next.find(s => s.id === stoppingService.id));
+        }
+        return next;
+    });
     setIsStopConfirmOpen(false);
   };
 
-  const ResourceProgress = ({ label, icon: Icon, value, color }: any) => (
-    <div className="space-y-2">
-      <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-slate-400">
-        <span className="flex items-center gap-1.5"><Icon size={11} /> {label}</span>
-        <span className={`font-mono ${value > 85 ? 'text-red-500 font-black' : 'text-slate-700'}`}>{value}%</span>
+  const ResourceProgress = ({ label, icon: Icon, value, used, total, unit, color }: any) => (
+    <div className="space-y-4 p-6 bg-slate-50/50 border border-slate-200 rounded-3xl hover:bg-white hover:border-primary-200 transition-all group/progress shadow-sm hover:shadow-md">
+      <div className="flex justify-between items-center">
+        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover/progress:text-slate-600 transition-colors flex items-center gap-2">
+           <Icon size={14} className="text-slate-300 group-hover/progress:text-primary-500 transition-colors" /> {label}
+        </span>
+        <span className={`text-[12px] font-black font-mono ${value > 85 ? 'text-red-500' : 'text-slate-900'}`}>{value}%</span>
       </div>
-      <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+      
+      <div className="h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
         <div className={`h-full ${value > 85 ? 'bg-red-500 animate-pulse' : color} transition-all duration-1000`} style={{ width: `${value}%` }} />
+      </div>
+
+      <div className="flex justify-between items-center pt-1">
+         <div className="flex items-baseline gap-1">
+            <span className="text-[13px] font-black font-mono text-slate-900 leading-none">{used}</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase leading-none">/ {total} {unit}</span>
+         </div>
+         <div className="flex items-center gap-1.5">
+            <div className={`w-1.5 h-1.5 rounded-full ${value > 85 ? 'bg-red-500 animate-ping' : 'bg-emerald-500'}`}></div>
+            <span className={`text-[8px] font-black uppercase tracking-widest ${value > 85 ? 'text-red-500' : 'text-slate-400'}`}>
+               {value > 85 ? 'Critical Load' : 'Stable'}
+            </span>
+         </div>
       </div>
     </div>
   );
@@ -126,14 +177,17 @@ const OnlineServicesPage: React.FC = () => {
                 <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.4)]"></div>
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Global Session Integrity: NOMINAL</span>
              </div>
-             <button onClick={() => setIsAuditOpen(false)} className="px-10 py-3 bg-slate-950 text-white rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-primary-600 transition-all shadow-xl active:scale-95">
-                CLOSE AUDIT
-             </button>
+             <div className="flex gap-3">
+                <button onClick={() => setIsAuditOpen(false)} className="px-10 py-3 bg-slate-950 text-white rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-primary-600 transition-all shadow-xl active:scale-95">
+                    CLOSE AUDIT
+                </button>
+             </div>
           </div>
         }
       >
         {selectedService && (
           <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 pb-10">
+            {/* 顶部服务信息卡片 */}
             <div className="bg-slate-950 rounded-[32px] p-8 border border-slate-800 relative overflow-hidden shadow-2xl group">
                <div className="absolute top-0 right-0 p-10 opacity-5 text-white pointer-events-none group-hover:opacity-10 transition-opacity duration-700">
                   <Rocket size={200} strokeWidth={1} />
@@ -167,17 +221,62 @@ const OnlineServicesPage: React.FC = () => {
                </div>
             </div>
 
+            {/* 服务生命周期管控按钮栏 */}
+            <div className="space-y-4">
+              <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2 px-1">
+                <Settings size={14} className="text-primary-500" /> 服务生命周期管控 (LIFECYCLE_CONTROL)
+              </h5>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                 {selectedService.status === 'running' ? (
+                   <>
+                      <button 
+                        onClick={() => handleAction(selectedService.id, 'stop')}
+                        className="flex flex-col items-center justify-center gap-3 p-5 bg-red-50 border border-red-100 rounded-[28px] text-red-600 hover:bg-red-600 hover:text-white transition-all group active:scale-95 shadow-sm"
+                      >
+                         <StopCircle size={24} strokeWidth={2.5} />
+                         <span className="text-[10px] font-black uppercase tracking-widest">停止服务 (STOP)</span>
+                      </button>
+                      <button 
+                        onClick={() => handleAction(selectedService.id, 'restart')}
+                        className="flex flex-col items-center justify-center gap-3 p-5 bg-white border border-slate-200 rounded-[28px] text-slate-700 hover:border-primary-500 hover:bg-primary-50 hover:text-primary-700 transition-all group active:scale-95 shadow-sm"
+                      >
+                         <RotateCw size={24} strokeWidth={2.5} className="group-hover:rotate-180 transition-transform duration-500" />
+                         <span className="text-[10px] font-black uppercase tracking-widest">重启实例 (RESTART)</span>
+                      </button>
+                   </>
+                 ) : (
+                    <button 
+                      onClick={() => handleAction(selectedService.id, 'start')}
+                      disabled={selectedService.status === 'deploying'}
+                      className="flex flex-col items-center justify-center gap-3 p-5 bg-emerald-50 border border-emerald-100 rounded-[28px] text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all group active:scale-95 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                       {selectedService.status === 'deploying' ? <RefreshCw size={24} className="animate-spin" /> : <PlayCircle size={24} strokeWidth={2.5} />}
+                       <span className="text-[10px] font-black uppercase tracking-widest">
+                         {selectedService.status === 'deploying' ? '处理中 (ASYNC)' : '启动服务 (START)'}
+                       </span>
+                    </button>
+                 )}
+                 <button 
+                    onClick={() => handleAction(selectedService.id, 'experience')}
+                    disabled={selectedService.status !== 'running'}
+                    className={`flex flex-col items-center justify-center gap-3 p-5 bg-white border border-slate-200 rounded-[28px] text-slate-700 hover:border-amber-500 hover:bg-amber-50 hover:text-amber-700 transition-all group active:scale-95 shadow-sm disabled:opacity-30 disabled:grayscale ${selectedService.status !== 'running' ? 'sm:col-span-2' : ''}`}
+                  >
+                    <MonitorPlay size={24} strokeWidth={2.5} />
+                    <span className="text-[10px] font-black uppercase tracking-widest">实验室体验 (PLAY)</span>
+                 </button>
+              </div>
+            </div>
+
             <div className="flex border-b border-slate-200 sticky top-0 bg-white z-20">
                {[
-                 { id: 'overview', label: '基础审计 (OVERVIEW)', icon: Info },
+                 { id: 'overview', label: '基本信息与接入 (OVERVIEW)', icon: Info },
                  { id: 'telemetry', label: '实时遥测 & 审计 (TELEMETRY)', icon: ActivitySquare },
-                 { id: 'access', label: '接入控制 (ACCESS)', icon: Network },
                  { id: 'specs', label: '算力规格 (SPEC)', icon: Cpu }
                ].map(tab => (
                  <button 
                    key={tab.id}
                    onClick={() => setActiveTab(tab.id as AuditTab)}
-                   className={`px-6 py-4 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 flex items-center gap-2.5 ${activeTab === tab.id ? 'border-primary-600 text-primary-600 bg-primary-50/20' : 'border-transparent text-slate-400 hover:text-slate-900'}`}
+                   className={`px-8 py-4 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 flex items-center gap-2.5 ${activeTab === tab.id ? 'border-primary-600 text-primary-600 bg-primary-50/20' : 'border-transparent text-slate-400 hover:text-slate-900'}`}
                  >
                     <tab.icon size={14} strokeWidth={2.5} />
                     {tab.label}
@@ -186,6 +285,91 @@ const OnlineServicesPage: React.FC = () => {
             </div>
 
             <div className="min-h-[400px]">
+               {activeTab === 'overview' && (
+                  <div className="space-y-10 animate-in fade-in duration-500">
+                     {/* 第一部分：身份元数据 */}
+                     <div className="space-y-6">
+                        <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2 px-1"><Info size={14} className="text-primary-500" /> 资产元数据 (IDENTITY)</h5>
+                        <div className="bg-white border border-slate-200 rounded-[32px] p-8 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-2">
+                           {[
+                              { label: '服务 UUID', val: selectedService.id, mono: true },
+                              { label: '所属项目', val: '核心算力中心 (szx-prod)', icon: Globe },
+                              { label: '镜像版本', val: selectedService.image || 'vllm:0.4.2-llama3', mono: true },
+                              { label: '部署日期', val: selectedService.createdAt, icon: Clock }
+                           ].map((item, i) => (
+                              <div key={i} className="flex justify-between py-4 border-b border-slate-50 last:border-0 items-center">
+                                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{item.label}</span>
+                                 <span className={`text-[11px] font-bold ${item.mono ? 'font-mono text-slate-600' : 'text-slate-800'}`}>{item.val}</span>
+                              </div>
+                           ))}
+                        </div>
+                     </div>
+
+                     {/* 第二部分：接口信息与接入控制内容 */}
+                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-6 border-t border-slate-100">
+                        <div className="space-y-6">
+                           <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2 px-1"><Globe size={14} className="text-primary-500" /> 接口信息 (INTERFACE_SPEC)</h5>
+                           <div className="bg-white border border-slate-200 rounded-[32px] p-8 shadow-sm space-y-6">
+                              {[
+                                 { label: 'API 终端地址 (ENDPOINT)', val: selectedService.endpoint, icon: Link, copyable: true },
+                                 { label: '请求协议 (PROTOCOL)', val: selectedService.protocol || 'HTTP', icon: Network, copyable: false },
+                                 { label: '服务端口 (PORT)', val: '8000', icon: Hash, copyable: false },
+                                 { label: '基础路径 (BASE_PATH)', val: selectedService.basePath || '/v1', icon: Command, copyable: true },
+                                 { label: '健康检查路径 (HEALTH_CHECK)', val: selectedService.healthPath || '/healthz', icon: Activity, copyable: true }
+                              ].map((item, i) => (
+                                 <div key={i} className="space-y-2 pb-4 border-b border-slate-50 last:border-0 last:pb-0">
+                                    <div className="flex justify-between items-center">
+                                       <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><item.icon size={12}/> {item.label}</span>
+                                       {item.copyable && (
+                                          <button 
+                                            onClick={() => handleCopy(item.val, `copy-${item.label}`)} 
+                                            className="p-1 text-primary-500 hover:bg-primary-50 rounded transition-all flex items-center gap-1"
+                                          >
+                                             {copiedId === `copy-${item.label}` ? <CheckCircle2 size={10} className="text-emerald-500" /> : <Copy size={10} />}
+                                             <span className="text-[8px] font-black uppercase">COPY</span>
+                                          </button>
+                                       )}
+                                    </div>
+                                    <div className="flex items-center justify-between group">
+                                       <span className={`text-[12px] font-mono font-black truncate pr-4 ${item.copyable ? 'text-slate-800' : 'text-slate-500'}`}>{item.val}</span>
+                                    </div>
+                                 </div>
+                              ))}
+                           </div>
+                        </div>
+                        <div className="space-y-6">
+                           <div className="flex justify-between items-center px-1">
+                              <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2"><Code size={14} className="text-primary-500" /> 调用代码示例 (SDK_SAMPLES)</h5>
+                              <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
+                                 <button onClick={() => setSnippetTab('curl')} className={`px-4 py-1.5 text-[9px] font-black rounded-lg transition-all ${snippetTab === 'curl' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-400'}`}>cURL</button>
+                                 <button onClick={() => setSnippetTab('python')} className={`px-4 py-1.5 text-[9px] font-black rounded-lg transition-all ${snippetTab === 'python' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-400'}`}>PYTHON</button>
+                              </div>
+                           </div>
+                           <div className="bg-slate-950 rounded-[32px] border border-slate-800 p-8 shadow-2xl relative overflow-hidden group min-h-[220px]">
+                              <button onClick={() => handleCopy(snippetTab === 'curl' ? 'curl -X...' : 'import requests...', 'snippet')} className="absolute top-6 right-6 p-2 bg-white/5 hover:bg-primary-600 text-slate-400 hover:text-white rounded-xl transition-all opacity-0 group-hover:opacity-100 shadow-xl border border-white/5">
+                                 {copiedId === 'snippet' ? <CheckCircle2 size={16} className="text-emerald-400" /> : <Copy size={16} />}
+                              </button>
+                              <div className="font-mono text-[11px] leading-relaxed text-primary-300 overflow-x-auto scrollbar-thin">
+                                 {snippetTab === 'curl' ? (
+                                    <pre>{`curl -X POST "${selectedService.endpoint}/predict" \\
+  -H "Content-Type: application/json" \\
+  -d '{"model": "${selectedService.modelName}", "prompt": "Hello"}'`}</pre>
+                                 ) : (
+                                    <pre>{`import requests
+
+res = requests.post(
+    "${selectedService.endpoint}/predict",
+    json={"model": "${selectedService.modelName}", "prompt": "Hello"}
+)
+print(res.json())`}</pre>
+                                 )}
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+               )}
+
                {activeTab === 'telemetry' && (
                   <div className="space-y-8 animate-in fade-in duration-500">
                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -228,7 +412,7 @@ const OnlineServicesPage: React.FC = () => {
                      <div className="space-y-5 pt-4">
                         <div className="flex justify-between items-center px-1">
                            <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2"><TerminalSquare size={14} className="text-slate-400" /> 生产审计与操作流 (AUDIT_STDOUT)</h5>
-                           <button onClick={() => alert('正在归档日志包...')} className="flex items-center gap-2 px-5 py-2 bg-primary-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-700 shadow-xl shadow-primary-500/20 active:scale-95 transition-all">
+                           <button onClick={() => handleDownloadLogs()} className="flex items-center gap-2 px-5 py-2 bg-primary-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-700 shadow-xl shadow-primary-500/20 active:scale-95 transition-all">
                               <Download size={14} /> 导出完整审计日志
                            </button>
                         </div>
@@ -253,139 +437,84 @@ const OnlineServicesPage: React.FC = () => {
                )}
 
                {activeTab === 'specs' && (
-                  <div className="space-y-8 animate-in fade-in duration-500">
-                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        <div className="lg:col-span-1 space-y-4">
-                           <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2 px-1"><Zap size={14} className="text-amber-500" /> 容器载荷水位 (RESOURCE_LOAD)</h5>
-                           <div className="bg-white border border-slate-200 rounded-[32px] p-8 shadow-sm space-y-8">
-                              <ResourceProgress label="CPU UTILIZATION" value={42} color="bg-primary-500" icon={Cpu} />
-                              <ResourceProgress label="GPU CORE LOAD" value={78} color="bg-emerald-500" icon={Zap} />
-                              <ResourceProgress label="VRAM COMMIT" value={65} color="bg-indigo-500" icon={ActivitySquare} />
-                              <ResourceProgress label="BLOCK STORAGE" value={30} color="bg-amber-500" icon={Database} />
+                  <div className="space-y-10 animate-in fade-in duration-500">
+                     <div className="space-y-6">
+                        <div className="flex justify-between items-center px-1">
+                           <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2"><Zap size={14} className="text-amber-500" /> 容器载荷水位 (RESOURCE_LOAD)</h5>
+                           <div className="flex items-center gap-2 px-3 py-1 bg-slate-100 rounded-lg">
+                              <div className="w-1.5 h-1.5 bg-primary-500 rounded-full animate-pulse"></div>
+                              <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Real-time Polling Active</span>
                            </div>
                         </div>
-                        <div className="lg:col-span-2 space-y-4">
-                           <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2 px-1"><Server size={14} className="text-primary-500" /> 调度节点阵列 (PHYSICAL_PLACEMENT)</h5>
-                           <div className="bg-white border border-slate-200 rounded-[32px] p-6 shadow-sm overflow-hidden">
-                              <div className="overflow-x-auto">
-                                 <table className="w-full text-left">
-                                    <thead>
-                                       <tr className="bg-slate-50 border-b border-slate-100"><th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Pod ID / Node IP</th><th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Status</th><th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Age</th></tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-50">
-                                       {[1, 2, 3, 4].map(i => (
-                                          <tr key={i} className="group hover:bg-slate-50/50 transition-colors">
-                                             <td className="px-6 py-4">
-                                                <div className="flex flex-col"><span className="text-[11px] font-black text-slate-800 font-mono tracking-tight uppercase">{selectedService.name}-vllm-0{i}</span><span className="text-[9px] text-slate-400 font-mono font-bold mt-1">10.128.0.{10+i}</span></div>
-                                             </td>
-                                             <td className="px-6 py-4"><Badge status="success">READY</Badge></td>
-                                             <td className="px-6 py-4 text-right font-mono text-[10px] font-bold text-slate-400">4d 12h</td>
-                                          </tr>
-                                       ))}
-                                    </tbody>
-                                 </table>
-                              </div>
+                        <div className="bg-white border border-slate-200 rounded-[32px] p-8 shadow-sm relative overflow-hidden">
+                           <div className="absolute top-0 right-0 p-12 opacity-[0.02] pointer-events-none text-slate-900">
+                              <Cpu size={180} strokeWidth={1} />
                            </div>
-                        </div>
-                     </div>
-                  </div>
-               )}
-
-               {activeTab === 'access' && (
-                  <div className="space-y-8 animate-in fade-in duration-500">
-                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <div className="space-y-6">
-                           <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2 px-1"><Globe size={14} className="text-primary-500" /> API ENDPOINTS</h5>
-                           <div className="bg-white border border-slate-200 rounded-[32px] p-8 shadow-sm space-y-6">
-                              {[
-                                 { label: 'PRIMARY ENDPOINT', val: selectedService.endpoint, icon: Link, copyable: true },
-                                 { label: 'HEALTH CHECK PATH', val: selectedService.healthPath || '/healthz', icon: Activity },
-                                 { label: 'BASE_V1_PATH', val: selectedService.basePath || '/v1', icon: Command }
-                              ].map((item, i) => (
-                                 <div key={i} className="space-y-2 pb-4 border-b border-slate-50 last:border-0 last:pb-0">
-                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><item.icon size={12}/> {item.label}</span>
-                                    <div className="flex items-center justify-between group">
-                                       <span className="text-[12px] font-mono font-black text-slate-800 truncate pr-4">{item.val}</span>
-                                       {item.copyable && (
-                                          <button onClick={() => handleCopy(item.val, `copy-${item.label}`)} className="p-1.5 bg-slate-50 hover:bg-primary-50 text-slate-400 hover:text-primary-600 rounded-lg transition-all opacity-0 group-hover:opacity-100">
-                                             {copiedId === `copy-${item.label}` ? <CheckCircle2 size={12} className="text-emerald-500" /> : <Copy size={12} />}
-                                          </button>
-                                       )}
-                                    </div>
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10 relative z-10">
+                              <ResourceProgress 
+                                 label="CPU UTILIZATION" 
+                                 value={42} 
+                                 used="6.72" 
+                                 total="16" 
+                                 unit="Cores" 
+                                 color="bg-primary-500" 
+                                 icon={Cpu} 
+                              />
+                              <ResourceProgress 
+                                 label="GPU CORE LOAD" 
+                                 value={78} 
+                                 used="3.12" 
+                                 total="4" 
+                                 unit="Units" 
+                                 color="bg-emerald-500" 
+                                 icon={Zap} 
+                              />
+                              <ResourceProgress 
+                                 label="VRAM COMMIT" 
+                                 value={65} 
+                                 used="52.0" 
+                                 total="80" 
+                                 unit="GB" 
+                                 color="bg-indigo-500" 
+                                 icon={ActivitySquare} 
+                              />
+                              <ResourceProgress 
+                                 label="BLOCK STORAGE" 
+                                 value={30} 
+                                 used="150" 
+                                 total="500" 
+                                 unit="GB" 
+                                 color="bg-amber-500" 
+                                 icon={Database} 
+                              />
+                           </div>
+                           <div className="mt-10 pt-6 border-t border-slate-50 flex justify-between items-center">
+                              <div className="flex items-center gap-4">
+                                 <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-sm bg-primary-500"></div>
+                                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Nominal Range</span>
                                  </div>
-                              ))}
-                           </div>
-                        </div>
-                        <div className="space-y-6">
-                           <div className="flex justify-between items-center px-1">
-                              <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2"><Code size={14} className="text-primary-500" /> 调用代码示例 (SDK_SAMPLES)</h5>
-                              <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
-                                 <button onClick={() => setSnippetTab('curl')} className={`px-4 py-1.5 text-[9px] font-black rounded-lg transition-all ${snippetTab === 'curl' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-400'}`}>cURL</button>
-                                 <button onClick={() => setSnippetTab('python')} className={`px-4 py-1.5 text-[9px] font-black rounded-lg transition-all ${snippetTab === 'python' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-400'}`}>PYTHON</button>
+                                 <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-sm bg-red-500 animate-pulse"></div>
+                                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Critical (> 85%)</span>
+                                 </div>
                               </div>
-                           </div>
-                           <div className="bg-slate-950 rounded-[32px] border border-slate-800 p-8 shadow-2xl relative overflow-hidden group">
-                              <button onClick={() => handleCopy(snippetTab === 'curl' ? 'curl -X...' : 'import requests...', 'snippet')} className="absolute top-6 right-6 p-2 bg-white/5 hover:bg-primary-600 text-slate-400 hover:text-white rounded-xl transition-all opacity-0 group-hover:opacity-100 shadow-xl border border-white/5">
-                                 {copiedId === 'snippet' ? <CheckCircle2 size={16} className="text-emerald-400" /> : <Copy size={16} />}
+                              <button className="flex items-center gap-2 text-[9px] font-black text-primary-600 uppercase hover:underline">
+                                 <MonitorPlay size={12} /> 查看详细资源拓扑
                               </button>
-                              <div className="font-mono text-[11px] leading-relaxed text-primary-300 overflow-x-auto scrollbar-thin">
-                                 {snippetTab === 'curl' ? (
-                                    <pre>{`curl -X POST "${selectedService.endpoint}/predict" \\
-  -H "Content-Type: application/json" \\
-  -d '{"model": "${selectedService.modelName}", "prompt": "Hello"}'`}</pre>
-                                 ) : (
-                                    <pre>{`import requests
-
-res = requests.post(
-    "${selectedService.endpoint}/predict",
-    json={"model": "${selectedService.modelName}", "prompt": "Hello"}
-)
-print(res.json())`}</pre>
-                                 )}
-                              </div>
                            </div>
                         </div>
                      </div>
-                  </div>
-               )}
 
-               {activeTab === 'overview' && (
-                  <div className="space-y-8 animate-in fade-in duration-500">
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="space-y-6">
-                           <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2 px-1"><Info size={14} className="text-primary-500" /> 资产元数据 (IDENTITY)</h5>
-                           <div className="bg-white border border-slate-200 rounded-[32px] p-8 shadow-sm divide-y divide-slate-50">
-                              {[
-                                 { label: '服务 UUID', val: selectedService.id, mono: true },
-                                 { label: '所属项目', val: '核心算力中心 (szx-prod)', icon: Globe },
-                                 { label: '镜像版本', val: selectedService.image || 'vllm:0.4.2-llama3', mono: true },
-                                 { label: '部署日期', val: selectedService.createdAt, icon: Clock }
-                              ].map((item, i) => (
-                                 <div key={i} className="flex justify-between py-4 first:pt-0 last:pb-0 items-center">
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{item.label}</span>
-                                    <span className={`text-[11px] font-bold ${item.mono ? 'font-mono text-slate-600' : 'text-slate-800'}`}>{item.val}</span>
-                                 </div>
-                              ))}
-                           </div>
+                     <div className="bg-primary-50/50 border border-primary-100 p-6 rounded-[28px] flex gap-5">
+                        <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-primary-600 shadow-sm shrink-0">
+                           <ShieldAlert size={24} strokeWidth={2.5} />
                         </div>
-                        <div className="space-y-6">
-                           <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2 px-1"><ShieldCheck size={14} className="text-emerald-500" /> 服务合规合规审计 (AUDIT)</h5>
-                           <div className="bg-slate-50 border border-slate-200 rounded-[32px] p-8 shadow-inner space-y-6">
-                              <div className="flex gap-4">
-                                 <div className="w-10 h-10 bg-white rounded-xl border border-slate-200 flex items-center justify-center text-emerald-600 shadow-sm shrink-0"><CheckCircle2 size={20} strokeWidth={2.5}/></div>
-                                 <div>
-                                    <p className="text-[11px] font-black text-slate-900 uppercase">健康检查状态: NOMINAL</p>
-                                    <p className="text-[9px] text-slate-500 font-bold uppercase mt-1">Liveness and Readiness probes passed at 14:15:02</p>
-                                 </div>
-                              </div>
-                              <div className="flex gap-4">
-                                 <div className="w-10 h-10 bg-white rounded-xl border border-slate-200 flex items-center justify-center text-primary-600 shadow-sm shrink-0"><Fingerprint size={20} strokeWidth={2.5}/></div>
-                                 <div>
-                                    <p className="text-[11px] font-black text-slate-900 uppercase">鉴权策略: Bearer Token</p>
-                                    <p className="text-[9px] text-slate-500 font-bold uppercase mt-1">Enabled with enterprise identity federation</p>
-                                 </div>
-                              </div>
-                           </div>
+                        <div className="space-y-1">
+                           <h6 className="text-[11px] font-black text-primary-900 uppercase tracking-widest">算力规格审计建议</h6>
+                           <p className="text-[11px] text-primary-800/80 leading-relaxed font-medium">
+                              当前 GPU 显存负载稳定在 65%。若 VRAM COMMIT 持续超过 90%，系统将自动触发显存碎片整理或水平扩容策略。建议在大规模并发测试前手动增加副本数。
+                           </p>
                         </div>
                      </div>
                   </div>

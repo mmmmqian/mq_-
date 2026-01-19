@@ -109,7 +109,6 @@ export const MOCK_PROJECTS: Project[] = [
 ];
 
 // --- 项目成员 Mock 数据 ---
-// Added missing MOCK_PROJECT_MEMBERS to fix import error in ProjectDetailsDrawer.tsx
 export const MOCK_PROJECT_MEMBERS: Record<string, ProjectMember[]> = {
   'PROJ-CORE-AI-01': [
     { userId: 'u-1', userName: 'zhangsan', realName: '张三', role: 'admin', joinedAt: '2024-01-10' },
@@ -122,7 +121,7 @@ export const MOCK_PROJECT_MEMBERS: Record<string, ProjectMember[]> = {
   ]
 };
 
-// --- 算力资源套件配置 (Inference/IDE 通用) ---
+// --- 算力资源套件配置 ---
 export const RESOURCE_BUNDLES = {
   basic: {
     id: 'basic',
@@ -156,8 +155,25 @@ export const RESOURCE_BUNDLES = {
   }
 };
 
-// 保持向下兼容
 export const IDE_RESOURCE_BUNDLES = RESOURCE_BUNDLES;
+
+export const INFERENCE_RESOURCE_BUNDLES = {
+  basic: {
+    ...RESOURCE_BUNDLES.basic,
+    gpuLabel: RESOURCE_BUNDLES.basic.gpu,
+    gpuValue: RESOURCE_BUNDLES.basic.gpuCount
+  },
+  standard: {
+    ...RESOURCE_BUNDLES.standard,
+    gpuLabel: RESOURCE_BUNDLES.standard.gpu,
+    gpuValue: RESOURCE_BUNDLES.standard.gpuCount
+  },
+  highPerf: {
+    ...RESOURCE_BUNDLES.highPerf,
+    gpuLabel: RESOURCE_BUNDLES.highPerf.gpu,
+    gpuValue: RESOURCE_BUNDLES.highPerf.gpuCount
+  }
+};
 
 // --- IDE 实例 Mock 数据 ---
 export const MOCK_IDE_INSTANCES = [
@@ -179,7 +195,7 @@ export const MOCK_IDE_INSTANCES = [
   }
 ];
 
-// --- 模型资产 Mock 数据 (增强版) ---
+// --- 模型资产 Mock 数据 (增强来源字段) ---
 export const MOCK_USER_MODELS = [
   {
     id: 'M-BERT-ZH',
@@ -202,6 +218,7 @@ export const MOCK_USER_MODELS = [
         date: '2024-05-20', 
         size: '412MB', 
         status: 'stable', 
+        source: 'training', // 训练产出
         downloads: '1.2k', 
         params: '110M', 
         metrics: 'F1: 94.2%', 
@@ -214,24 +231,13 @@ export const MOCK_USER_MODELS = [
         date: '2024-03-15', 
         size: '410MB', 
         status: 'stable', 
+        source: 'manual', // 手动上传
         downloads: '4.5k', 
         params: '110M', 
         metrics: 'F1: 92.5%', 
         path: 's3://models/bert-zh/v2.0.0/pytorch_model.bin',
         mountPath: '/data/research/bert-v2',
         mountPathSource: 'custom'
-      },
-      { 
-        version: 'v1.5.0-alpha', 
-        date: '2024-01-10', 
-        size: '408MB', 
-        status: 'experimental', 
-        downloads: '210', 
-        params: '110M', 
-        metrics: 'F1: 89.1%', 
-        path: 's3://models/bert-zh/v1.5.0-alpha/weights.bin',
-        mountPath: '/mnt/models/bert-zh/v1.5.0-alpha',
-        mountPathSource: 'default'
       }
     ]
   },
@@ -256,53 +262,12 @@ export const MOCK_USER_MODELS = [
         date: '2024-05-15', 
         size: '52MB', 
         status: 'stable', 
+        source: 'training',
         downloads: '850', 
         params: '3.2M', 
         metrics: 'mAP@50: 91.0', 
         path: 'oss://models/yolov8/v8.2.1/yolov8n.pt',
         mountPath: '/mnt/models/yolov8/v8.2.1',
-        mountPathSource: 'default'
-      }
-    ]
-  },
-  {
-    id: 'M-RESNET50',
-    name: 'resnet50-classification',
-    displayName: 'ResNet50图像分类',
-    type: '计算机视觉',
-    framework: 'PyTorch / torchvision',
-    latestVersion: 'v1.0.2',
-    status: 'stable',
-    owner: 'vision-algo',
-    size: '98 MB',
-    createdAt: '2024-02-05',
-    updatedAt: '2024-05-10 11:20',
-    description: '经典残差网络，预置 ImageNet 权重，用于通用图像特征提取。',
-    storageType: 'S3',
-    pythonVersion: '3.8',
-    versions: [
-      { 
-        version: 'v1.0.2', 
-        date: '2024-05-10', 
-        size: '98MB', 
-        status: 'stable', 
-        downloads: '2.8k', 
-        params: '25.6M', 
-        metrics: 'Top-1: 76.1%', 
-        path: 's3://models/resnet50/v1.0.2/model.pth',
-        mountPath: '/mnt/models/resnet50/v1.0.2',
-        mountPathSource: 'default'
-      },
-      { 
-        version: 'v1.0.1', 
-        date: '2024-02-05', 
-        size: '98MB', 
-        status: 'deprecated', 
-        downloads: '1.1k', 
-        params: '25.6M', 
-        metrics: 'Top-1: 75.8%', 
-        path: 's3://models/resnet50/v1.0.1/model.pth',
-        mountPath: '/mnt/models/resnet50/v1.0.1',
         mountPathSource: 'default'
       }
     ]
@@ -369,7 +334,7 @@ export const SIDEBAR_ITEMS: Record<string, any[]> = {
     { title: '应用编排', items: [{ id: 'agent-factory', label: '智能体工厂', icon: Sparkles }, { id: 'agent-chat', label: '对话测试', icon: MessageSquare }] }
   ],
   knowledge: [
-    { title: '知识底座', items: [{ id: 'kb-mgmt', label: '库管理', icon: Library }, { id: 'embedding-mgmt', label: '向量检索', icon: SearchCode }] }
+    { title: '知识库', items: [{ id: 'kb-mgmt', label: '库管理', icon: Library }, { id: 'embedding-mgmt', label: '向量检索', icon: SearchCode }] }
   ]
 };
 

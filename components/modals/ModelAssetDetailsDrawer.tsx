@@ -11,7 +11,8 @@ import {
   TrendingUp, BarChart3,
   Lock, Globe, Command,
   Plus, Copy, Link, Gauge,
-  ChevronRight, DownloadCloud
+  ChevronRight, DownloadCloud,
+  BrainCircuit, UploadCloud
 } from 'lucide-react';
 import MonitoringChart from '../ui/MonitoringChart';
 import { PublishModelVersionModal } from './PublishModelVersionModal';
@@ -47,6 +48,14 @@ export const ModelAssetDetailsDrawer: React.FC<ModelAssetDetailsDrawerProps> = (
       case 'deprecated': return { label: '已弃用 (EOL)', variant: 'neutral' as const };
       default: return { label: status.toUpperCase(), variant: 'neutral' as const };
     }
+  };
+
+  // 获取来源配置
+  const getSourceConfig = (source: string) => {
+    if (source === 'training') {
+      return { label: '训练产出', icon: BrainCircuit, className: 'bg-indigo-50 text-indigo-700 border-indigo-100' };
+    }
+    return { label: '手动上传', icon: UploadCloud, className: 'bg-amber-50 text-amber-700 border-amber-100' };
   };
 
   const DetailRow = ({ label, value, mono = false, icon: Icon }: any) => (
@@ -204,6 +213,7 @@ export const ModelAssetDetailsDrawer: React.FC<ModelAssetDetailsDrawerProps> = (
                  <div className="space-y-5">
                     {(model.versions || []).map((v: any, idx: number) => {
                        const statusCfg = getStatusConfig(v.status || 'stable');
+                       const sourceCfg = getSourceConfig(v.source || 'manual');
                        return (
                           <div key={idx} className="group bg-white border border-slate-200 rounded-[28px] p-0 hover:border-primary-400 hover:shadow-2xl transition-all duration-500 overflow-hidden flex flex-col md:flex-row">
                              <div className="flex-1 p-7 space-y-7">
@@ -217,8 +227,15 @@ export const ModelAssetDetailsDrawer: React.FC<ModelAssetDetailsDrawerProps> = (
                                             <span className="text-lg font-black text-slate-900 font-mono tracking-tight leading-none">{v.version}</span>
                                             {idx === 0 && <span className="px-1.5 py-0.5 bg-primary-100 text-primary-700 text-[8px] font-black uppercase rounded tracking-widest">Latest</span>}
                                          </div>
-                                         <div className="flex items-center gap-2.5">
+                                         <div className="flex flex-wrap items-center gap-2.5">
                                             <Badge status={statusCfg.variant} showDot>{statusCfg.label}</Badge>
+                                            
+                                            {/* 新增：模型来源标签 */}
+                                            <div className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black border uppercase tracking-tighter gap-1.5 ${sourceCfg.className}`}>
+                                               <sourceCfg.icon size={10} strokeWidth={3} />
+                                               {sourceCfg.label}
+                                            </div>
+
                                             <div className="w-1 h-1 rounded-full bg-slate-200"></div>
                                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><Clock size={11}/> {v.date}</span>
                                          </div>

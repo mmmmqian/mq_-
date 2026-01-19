@@ -13,6 +13,7 @@ import ModelHubPage from './pages/Training/ModelHub';
 import IDEEnvironmentPage from './pages/Training/IDEEnvironment';
 import OnlineServicesPage from './pages/Inference/OnlineServices';
 import ServiceMonitoringPage from './pages/Inference/ServiceMonitoring';
+import InferencePlaygroundPage from './pages/Inference/InferencePlayground'; // 新增
 import { ModuleType } from './types';
 import { SIDEBAR_ITEMS } from './constants';
 import { ChevronRight, ExternalLink, ShieldCheck, Activity, Rocket } from 'lucide-react';
@@ -20,15 +21,20 @@ import { ChevronRight, ExternalLink, ShieldCheck, Activity, Rocket } from 'lucid
 const App: React.FC = () => {
   const [activeModule, setActiveModule] = useState<ModuleType>('compute');
   const [activePage, setActivePage] = useState<string>('clusters');
+  const [navigationData, setNavigationData] = useState<any>(null); // 新增：用于页面间传参
 
-  // Navigation controller to be passed to pages
-  const navigate = (module: any, page: string) => {
+  // Navigation controller enhanced to support extra data
+  const navigate = (module: any, page: string, data?: any) => {
     setActiveModule(module);
     setActivePage(page);
+    if (data) setNavigationData(data);
   };
 
   // Modern Professional Sidebar
   const Sidebar = () => {
+    // 如果是下钻的 Playground 页面，隐藏侧边栏以提供全屏感
+    if (activePage === 'inference-playground') return null;
+
     const items = SIDEBAR_ITEMS[activeModule] || SIDEBAR_ITEMS['compute'];
     
     return (
@@ -133,8 +139,9 @@ const App: React.FC = () => {
     }
 
     if (activeModule === 'inference') {
-      if (activePage === 'online-service') return <OnlineServicesPage />;
+      if (activePage === 'online-service') return <OnlineServicesPage navigate={navigate} />;
       if (activePage === 'service-monitor') return <ServiceMonitoringPage />;
+      if (activePage === 'inference-playground') return <InferencePlaygroundPage service={navigationData?.service} onBack={() => navigate('inference', 'online-service')} />;
       
       return (
         <div className="flex flex-col items-center justify-center h-[70vh] text-center p-8 border border-slate-200 rounded-4xl bg-white/50 backdrop-blur-sm shadow-sm">
@@ -176,8 +183,8 @@ const App: React.FC = () => {
       
       <Sidebar />
       
-      <main className="pl-72 pt-16 min-h-screen transition-all duration-300 overflow-x-hidden">
-        <div className="max-w-[1600px] mx-auto p-8 lg:p-10">
+      <main className={`${activePage === 'inference-playground' ? 'pl-0' : 'pl-72'} pt-16 min-h-screen transition-all duration-300 overflow-x-hidden`}>
+        <div className={`${activePage === 'inference-playground' ? 'max-w-full' : 'max-w-[1600px] mx-auto p-8 lg:p-10'}`}>
            {renderContent()}
         </div>
       </main>
