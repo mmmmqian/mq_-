@@ -195,7 +195,7 @@ export const MOCK_IDE_INSTANCES = [
   }
 ];
 
-// --- 模型资产 Mock 数据 (增强来源字段) ---
+// --- 模型资产 Mock 数据 ---
 export const MOCK_USER_MODELS = [
   {
     id: 'M-BERT-ZH',
@@ -218,26 +218,13 @@ export const MOCK_USER_MODELS = [
         date: '2024-05-20', 
         size: '412MB', 
         status: 'stable', 
-        source: 'training', // 训练产出
+        source: 'training', 
         downloads: '1.2k', 
         params: '110M', 
         metrics: 'F1: 94.2%', 
         path: 's3://models/bert-zh/v2.1.0/pytorch_model.bin',
         mountPath: '/mnt/models/bert-zh/v2.1.0',
         mountPathSource: 'default'
-      },
-      { 
-        version: 'v2.0.0', 
-        date: '2024-03-15', 
-        size: '410MB', 
-        status: 'stable', 
-        source: 'manual', // 手动上传
-        downloads: '4.5k', 
-        params: '110M', 
-        metrics: 'F1: 92.5%', 
-        path: 's3://models/bert-zh/v2.0.0/pytorch_model.bin',
-        mountPath: '/data/research/bert-v2',
-        mountPathSource: 'custom'
       }
     ]
   },
@@ -275,49 +262,87 @@ export const MOCK_USER_MODELS = [
 ];
 
 export const MOCK_PRETRAINED_MODELS = [
-  { id: 'HUB-LLAMA-3', name: 'Meta Llama 3', provider: 'Meta AI', type: 'Large Language Model', params: '70B', performance: 98, downloads: '1.2M', tags: ['Instruction', 'Multi-lingual'], latestVersion: 'v3.1.0', path: '/public/weights/llama3-70b-instruct', license: 'Llama 3 Community', framework: 'PyTorch / Transformers' }
+  { 
+    id: 'HUB-LLAMA-3', 
+    name: 'Meta Llama 3 70B', 
+    provider: 'Meta AI', 
+    taskType: '文本生成', 
+    params: '70B', 
+    framework: 'PyTorch', 
+    latestVersion: 'v3.1.0', 
+    updatedAt: '2024-05-24', 
+    tags: ['Instruction', 'Multi-lingual'],
+    description: '下一代最先进的开源大语言模型，具有强大的推理和代码生成能力。'
+  },
+  { 
+    id: 'HUB-RESNET-50', 
+    name: 'ResNet-50 v1.5', 
+    provider: 'PyTorch Hub', 
+    taskType: '图像分类', 
+    params: '25.6M', 
+    framework: 'PyTorch', 
+    latestVersion: 'v1.5.0', 
+    updatedAt: '2024-04-12', 
+    tags: ['CV', 'Baseline'],
+    description: '经典的深层残差网络，广泛用于图像特征提取与物体识别任务。'
+  },
+  { 
+    id: 'HUB-YOLOV10', 
+    name: 'YOLOv10 Real-time', 
+    provider: 'Open Source', 
+    taskType: '目标检测', 
+    params: '2.3M', 
+    framework: 'PyTorch', 
+    latestVersion: 'v10.0.2', 
+    updatedAt: '2024-05-21', 
+    tags: ['Real-time', 'CV'],
+    description: '无需 NMS 的实时端到端目标检测模型，刷新性能边界。'
+  },
+  { 
+    id: 'HUB-BERT-SENT', 
+    name: 'BERT-Sentiment-Analyzer', 
+    provider: 'Hugging Face', 
+    taskType: '情感分析', 
+    params: '110M', 
+    framework: 'TensorFlow', 
+    latestVersion: 'v2.1.0', 
+    updatedAt: '2024-03-28', 
+    tags: ['NLP', 'Analysis'],
+    description: '针对社交媒体评论优化的情感极性分类器。'
+  },
+  { 
+    id: 'HUB-TS-PROPHET', 
+    name: 'Neural Prophet TimeSeries', 
+    provider: 'Meta Research', 
+    taskType: '时间序列', 
+    params: '1.2M', 
+    framework: 'PyTorch', 
+    latestVersion: 'v1.0.4', 
+    updatedAt: '2024-05-02', 
+    tags: ['Forecasting', 'Statistics'],
+    description: '融合深度学习与传统统计规律的大规模时间序列预测框架。'
+  },
+  { 
+    id: 'HUB-PPO-AGENT', 
+    name: 'Deep-RL-PPO-Agent', 
+    provider: 'OpenAI Baselines', 
+    taskType: '强化学习', 
+    params: '850K', 
+    framework: 'TensorFlow', 
+    latestVersion: 'v0.8.2', 
+    updatedAt: '2023-12-15', 
+    tags: ['RL', 'Decision-making'],
+    description: '近端策略优化 (PPO) 实现，适用于离散和连续控制任务。'
+  }
 ];
 
 export const SIDEBAR_ITEMS: Record<string, any[]> = {
   compute: [
-    { 
-      title: '集群与资源', 
-      items: [
-        { id: 'clusters', label: '集群与节点', icon: Server }, 
-        { id: 'pools', label: '资源池化', icon: Layers }, 
-        { id: 'hetero', label: '异构资源', icon: Cpu }
-      ] 
-    },
-    { 
-      title: '租户与权限', 
-      items: [
-        { id: 'tenants', label: '租户管理', icon: Users },
-        { id: 'projects', label: '项目管理', icon: FolderKanban },
-        { id: 'users', label: '用户管理', icon: UserCircle },
-        { id: 'roles', label: '角色管理', icon: ShieldCheck }
-      ] 
-    },
-    { 
-      title: '任务调度', 
-      items: [
-        { id: 'tasks', label: '任务调度', icon: List }
-      ] 
-    },
-    { 
-      title: '监控中心', 
-      items: [
-        { id: 'monitoring', label: '资源监控', icon: Activity },
-        { id: 'logs', label: '日志中心', icon: FileText },
-        { id: 'alerts', label: '告警中心', icon: Bell }
-      ] 
-    },
-    { 
-      title: '成本与配置', 
-      items: [
-        { id: 'costs', label: '成本中心', icon: CreditCard },
-        { id: 'sys-settings', label: '系统配置', icon: Sliders }
-      ] 
-    }
+    { title: '集群与资源', items: [{ id: 'clusters', label: '集群与节点', icon: Server }, { id: 'pools', label: '资源池化', icon: Layers }, { id: 'hetero', label: '异构资源', icon: Cpu }] },
+    { title: '租户与权限', items: [{ id: 'tenants', label: '租户管理', icon: Users }, { id: 'projects', label: '项目管理', icon: FolderKanban }, { id: 'users', label: '用户管理', icon: UserCircle }, { id: 'roles', label: '角色管理', icon: ShieldCheck }] },
+    { title: '任务调度', items: [{ id: 'tasks', label: '任务调度', icon: List }] },
+    { title: '监控中心', items: [{ id: 'monitoring', label: '资源监控', icon: Activity }, { id: 'logs', label: '日志中心', icon: FileText }, { id: 'alerts', label: '告警中心', icon: Bell }] },
+    { title: '成本与配置', items: [{ id: 'costs', label: '成本中心', icon: CreditCard }, { id: 'sys-settings', label: '系统配置', icon: Sliders }] }
   ],
   data: [
     { title: '数据管理', items: [{ id: 'dataset-mgmt', label: '数据集管理', icon: Database }, { id: 'data-processing', label: '数据预处理', icon: FileCode }] }
@@ -369,28 +394,6 @@ export const MOCK_INFERENCE_SERVICES: InferenceService[] = [
     latency: 124,
     nodeName: 'szx-node-001',
     image: 'ai-nex.repo.io/inference/vllm:0.4.2-llama3'
-  },
-  {
-    id: 'SVC-8842-B',
-    name: 'bert-ner-api',
-    modelName: 'bert-base-chinese',
-    modelVersion: 'v2.1.0',
-    status: 'running',
-    replicas: { ready: 2, total: 2 },
-    endpoint: 'https://bert.api.ai-nex.io/v1',
-    basePath: '/v1',
-    healthPath: '/status',
-    protocol: 'HTTP',
-    cpu: '4c',
-    memory: '16G',
-    gpu: '1x T4 (16G)',
-    owner: 'lisi',
-    createdAt: '2024-05-22 14:15',
-    uptime: '2d 08h',
-    qps: 450,
-    latency: 12,
-    nodeName: 'szx-node-005',
-    image: 'ai-nex.repo.io/inference/triton:23.10-py3'
   }
 ];
 
