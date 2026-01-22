@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 type StatusType = 'success' | 'warning' | 'error' | 'neutral' | 'info' | 'primary';
@@ -20,9 +21,10 @@ const dotColorMap: Record<StatusType, string> = {
   primary: 'bg-primary-500',
 };
 
-export const Badge: React.FC<{ status: StatusType; children: React.ReactNode; showDot?: boolean }> = ({ status, children, showDot = true }) => {
+// Added className support to Badge component
+export const Badge: React.FC<{ status: StatusType; children: React.ReactNode; showDot?: boolean; className?: string }> = ({ status, children, showDot = true, className = "" }) => {
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium border ${styleMap[status]} whitespace-nowrap`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium border ${styleMap[status]} whitespace-nowrap ${className}`}>
       {showDot && (
         <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${dotColorMap[status]}`}></span>
       )}

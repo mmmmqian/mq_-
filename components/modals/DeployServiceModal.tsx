@@ -45,10 +45,11 @@ export const DeployServiceModal: React.FC<DeployServiceModalProps> = ({ isOpen, 
   ]);
   
   const activeProject = MOCK_PROJECTS[0];
+  // Standardized to 'memory' to match ProjectQuota interface
   const availableResources = {
     gpu: activeProject.quota.gpu - activeProject.quota.gpuUsed,
     cpu: activeProject.quota.cpu - activeProject.quota.cpuUsed,
-    mem: activeProject.quota.memory - activeProject.quota.memoryUsed,
+    memory: activeProject.quota.memory - activeProject.quota.memoryUsed,
     storage: activeProject.quota.storage - activeProject.quota.storageUsed
   };
 
@@ -114,29 +115,31 @@ export const DeployServiceModal: React.FC<DeployServiceModalProps> = ({ isOpen, 
   }, [formData.modelId, formData.version, formData.modelSource]);
 
   const requiredResources = useMemo(() => {
+    // Corrected 'mem' property to 'memory' to maintain consistency across union types
     const unit = isManual ? formData.manual : {
       gpu: (INFERENCE_RESOURCE_BUNDLES as any)[formData.bundle].gpuValue,
       cpu: (INFERENCE_RESOURCE_BUNDLES as any)[formData.bundle].cpu,
-      mem: (INFERENCE_RESOURCE_BUNDLES as any)[formData.bundle].memory,
+      memory: (INFERENCE_RESOURCE_BUNDLES as any)[formData.bundle].memory,
       storage: (INFERENCE_RESOURCE_BUNDLES as any)[formData.bundle].storage
     };
     
     return {
       gpu: unit.gpu * formData.replicas,
       cpu: unit.cpu * formData.replicas,
-      mem: (unit.mem || unit.memory) * formData.replicas,
+      memory: unit.memory * formData.replicas, 
       storage: unit.storage 
     };
   }, [formData, isManual]);
 
+  // Updated 'mem' to 'memory' for consistency
   const isExceeded = {
     gpu: requiredResources.gpu > availableResources.gpu,
     cpu: requiredResources.cpu > availableResources.cpu,
-    mem: requiredResources.mem > availableResources.mem,
+    memory: requiredResources.memory > availableResources.memory,
     storage: requiredResources.storage > availableResources.storage,
     any: requiredResources.gpu > availableResources.gpu || 
          requiredResources.cpu > availableResources.cpu || 
-         requiredResources.mem > availableResources.mem || 
+         requiredResources.memory > availableResources.memory || 
          requiredResources.storage > availableResources.storage
   };
 
@@ -429,7 +432,7 @@ export const DeployServiceModal: React.FC<DeployServiceModalProps> = ({ isOpen, 
                       {[
                         { label: 'GPU', val: availableResources.gpu, unit: 'U', icon: Zap, color: 'text-emerald-400' },
                         { label: 'CPU', val: availableResources.cpu, unit: 'C', icon: Cpu, color: 'text-primary-400' },
-                        { label: 'RAM', val: availableResources.mem, unit: 'G', icon: Activity, color: 'text-indigo-400' },
+                        { label: 'RAM', val: availableResources.memory, unit: 'G', icon: Activity, color: 'text-indigo-400' },
                         { label: 'STO', val: availableResources.storage, unit: 'G', icon: HardDrive, color: 'text-amber-400' }
                       ].map((res, i) => (
                         <div key={i} className="flex items-center gap-2">
@@ -492,7 +495,7 @@ export const DeployServiceModal: React.FC<DeployServiceModalProps> = ({ isOpen, 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                      <ResourceSlider label="GPU VRAM" icon={Zap} color="text-emerald-500" value={formData.manual.gpu} min={1} quota={activeProject.quota.gpu} unit="G" isWarn={isExceeded.gpu} onChange={(v: number) => setFormData({...formData, manual: {...formData.manual, gpu: v}})} />
                      <ResourceSlider label="CPU CORES" icon={Cpu} color="text-primary-500" value={formData.manual.cpu} min={1} quota={activeProject.quota.cpu} unit="C" isWarn={isExceeded.cpu} onChange={(v: number) => setFormData({...formData, manual: {...formData.manual, cpu: v}})} />
-                     <ResourceSlider label="MEMORY" icon={Activity} color="text-indigo-500" value={formData.manual.memory} min={4} quota={activeProject.quota.memory} unit="G" isWarn={isExceeded.mem} onChange={(v: number) => setFormData({...formData, manual: {...formData.manual, memory: v}})} />
+                     <ResourceSlider label="MEMORY" icon={Activity} color="text-indigo-500" value={formData.manual.memory} min={4} quota={activeProject.quota.memory} unit="G" isWarn={isExceeded.memory} onChange={(v: number) => setFormData({...formData, manual: {...formData.manual, memory: v}})} />
                      <ResourceSlider label="STORAGE" icon={HardDrive} color="text-amber-500" value={formData.manual.storage} min={20} quota={activeProject.quota.storage} unit="G" isWarn={isExceeded.storage} onChange={(v: number) => setFormData({...formData, manual: {...formData.manual, storage: v}})} />
                   </div>
                </div>

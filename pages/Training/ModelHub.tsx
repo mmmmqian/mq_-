@@ -1,31 +1,36 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
-  Globe, Search, Star, Download, 
-  ExternalLink, Zap, BrainCircuit, 
-  Cpu, Activity, Filter, LayoutGrid, 
-  Layout, ArrowRight, ShieldCheck, TrendingUp,
-  MonitorPlay, Rocket, Info, FileText,
-  Terminal, ShieldAlert, CheckCircle2,
-  Box, Database, Code, GitBranch, Clock,
-  Sparkles, MessageSquare, Image as ImageIcon,
-  LineChart, MousePointer2, Share2, Layers
+  Globe, Search, Filter, 
+  Code, GitBranch, Clock,
+  MonitorPlay, Rocket,
+  Box, Database, Layers,
+  Binary, History, SortAsc, SortDesc,
+  Tag, Info, CheckCircle2,
+  Layout, Cpu, Activity, ShieldCheck,
+  CpuIcon, Zap
 } from 'lucide-react';
 import { Badge } from '../../components/ui/Badge';
-import { Drawer } from '../../components/ui/Drawer';
+import { ModelHubDetailsDrawer } from '../../components/modals/ModelHubDetailsDrawer';
+import { CustomSelect } from '../../components/ui/Select';
 import { MOCK_PRETRAINED_MODELS } from '../../constants';
 
 interface ModelHubProps {
   navigate?: (module: any, page: string, data?: any) => void;
 }
 
+type SortField = 'updatedAt' | 'name';
+type SortOrder = 'asc' | 'desc';
+
 const ModelHubPage: React.FC<ModelHubProps> = ({ navigate }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [taskFilter, setTaskFilter] = useState('全部类型');
+  const [frameworkFilter, setFrameworkFilter] = useState('all');
+  const [sortField, setSortField] = useState<SortField>('updatedAt');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  
   const [selectedModel, setSelectedModel] = useState<any | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [activeCategory, setActiveCategory] = useState('全部类型');
-
-  const categories = ['全部类型', '图像分类', '目标检测', '文本生成', '情感分析', '时间序列', '强化学习'];
 
   const getTaskColor = (type: string) => {
     switch (type) {
@@ -39,174 +44,213 @@ const ModelHubPage: React.FC<ModelHubProps> = ({ navigate }) => {
     }
   };
 
-  const handleDeploy = (model: any) => {
-    if (navigate) {
-      navigate('inference', 'online-service');
+  // 框架视觉配置映射
+  const getFrameworkStyle = (fw: string) => {
+    const name = fw.toLowerCase();
+    if (name.includes('pytorch')) {
+      return { 
+        bg: 'bg-orange-50 border-orange-200 text-orange-600', 
+        glow: 'shadow-[0_0_15px_rgba(238,76,44,0.1)]',
+        accent: 'bg-orange-500'
+      };
     }
+    if (name.includes('tensorflow')) {
+      return { 
+        bg: 'bg-amber-50 border-amber-200 text-amber-600', 
+        glow: 'shadow-[0_0_15px_rgba(255,111,0,0.1)]',
+        accent: 'bg-amber-500'
+      };
+    }
+    return { 
+      bg: 'bg-blue-50 border-blue-200 text-blue-600', 
+      glow: 'shadow-[0_0_15px_rgba(59,130,246,0.1)]',
+      accent: 'bg-blue-500'
+    };
   };
 
-  const handleQuickTrial = (model: any) => {
-    alert(`Playground Initializing: Setting up sandboxed environment for ${model.name}...`);
-  };
+  const filteredAndSortedModels = useMemo(() => {
+    let result = MOCK_PRETRAINED_MODELS.filter(m => {
+      const term = searchTerm.toLowerCase();
+      const matchesSearch = term === '' || 
+        m.name.toLowerCase().includes(term) || 
+        m.displayName.toLowerCase().includes(term) ||
+        m.tags.some(tag => tag.toLowerCase().includes(term));
+      
+      const matchesTask = taskFilter === '全部类型' || m.taskType === taskFilter;
+      const matchesFramework = frameworkFilter === 'all' || m.framework === frameworkFilter;
 
-  const filteredModels = MOCK_PRETRAINED_MODELS.filter(m => 
-    (activeCategory === '全部类型' || m.taskType === activeCategory) &&
-    (m.name.toLowerCase().includes(searchTerm.toLowerCase()) || m.provider.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+      return matchesSearch && matchesTask && matchesFramework;
+    });
+
+    result.sort((a, b) => {
+      let comparison = 0;
+      if (sortField === 'updatedAt') {
+        comparison = new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
+      } else {
+        comparison = a.name.localeCompare(b.name);
+      }
+      return sortOrder === 'desc' ? -comparison : comparison;
+    });
+
+    return result;
+  }, [searchTerm, taskFilter, frameworkFilter, sortField, sortOrder]);
+
+  const handleOpenDetails = (model: any) => {
+    setSelectedModel(model);
+    setIsDetailsOpen(true);
+  };
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-700 font-sans pb-20">
-      {/* 1. Discovery Section */}
-      <div className="relative rounded-[40px] bg-slate-950 p-12 lg:p-16 overflow-hidden border border-slate-800 shadow-2xl group">
-         <div className="absolute inset-0 tech-grid opacity-[0.05]"></div>
-         <div className="absolute -top-24 -right-24 p-16 opacity-[0.03] text-primary-500 pointer-events-none group-hover:opacity-[0.06] transition-opacity">
-            <Globe size={400} strokeWidth={1} />
+    <div className="space-y-10 animate-in fade-in duration-700 font-sans pb-20 max-w-[1600px] mx-auto">
+      <ModelHubDetailsDrawer 
+        isOpen={isDetailsOpen} 
+        onClose={() => setIsDetailsOpen(false)} 
+        model={selectedModel}
+        onDeploy={(m) => navigate?.('inference', 'online-service', { sourceModel: m })}
+        onTrial={(m) => navigate?.('inference', 'inference-playground', { 
+          service: { id: `PLAY-TEMP-${m.id}`, name: `${m.name} Sandbox`, modelName: m.name, modelVersion: m.latestVersion, status: 'running', endpoint: 'https://sandbox.api.ai-nex.io' } 
+        })}
+      />
+
+      {/* 1. Header Banner */}
+      <div className="relative rounded-[32px] bg-slate-950 p-8 lg:px-12 lg:py-10 overflow-hidden border border-slate-800 shadow-2xl group">
+         <div className="absolute inset-0 tech-grid opacity-[0.03]"></div>
+         <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(27,88,244,0.06),transparent_50%)]"></div>
+         <div className="absolute -top-16 -right-16 p-8 opacity-[0.03] text-primary-500 pointer-events-none group-hover:opacity-[0.05] transition-all duration-[3000ms]">
+            <Globe size={280} strokeWidth={0.5} />
          </div>
          
-         <div className="relative z-10 max-w-3xl">
-            <div className="flex items-center gap-3 mb-8">
-               <Badge status="primary" showDot={false}>MODEL REGISTRY HUB</Badge>
-               <div className="w-1 h-1 rounded-full bg-slate-700"></div>
-               <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Enterprise Pre-trained Asset Matrix</span>
+         <div className="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-8">
+            <div className="max-w-2xl">
+              <div className="flex items-center gap-3 mb-6">
+                 <div className="px-3 py-1 rounded-lg bg-primary-600/20 border border-primary-500/30 text-primary-400 text-[9px] font-black uppercase tracking-[0.2em]">Registry</div>
+                 <div className="w-1 h-1 rounded-full bg-slate-700"></div>
+                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Enterprise Ready</span>
+              </div>
+              <h1 className="text-3xl lg:text-4xl font-black text-white tracking-tighter uppercase leading-none mb-4">发现顶级<span className="text-primary-500">预训练资产</span></h1>
+              <p className="text-slate-400 text-xs lg:text-sm font-medium uppercase tracking-[0.1em] leading-relaxed opacity-70">深度集成行业 SOTA 模型库。提供从发现到部署的严谨闭环链路。</p>
             </div>
-            
-            <h1 className="text-4xl lg:text-6xl font-black text-white tracking-tighter uppercase leading-[0.9]">
-              发现顶级预训练资产
-            </h1>
-            
-            <p className="text-slate-400 mt-6 text-sm lg:text-base font-medium uppercase tracking-widest leading-relaxed opacity-70 max-w-xl">
-              深度集成行业 SOTA 模型库。提供从 <span className="text-white">发现、性能审计</span> 到 <span className="text-primary-400">一键生产部署</span> 的严谨交付链路。
-            </p>
-            
-            <div className="flex flex-col sm:flex-row gap-4 mt-12">
-               <div className="relative flex-1 group">
-                  <Search size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary-400 transition-colors" />
-                  <input 
-                    type="text" 
-                    placeholder="探索 LLAMA, QWEN, RESNET, YOLO..." 
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-14 pr-4 py-5 bg-white/5 border border-white/10 rounded-2xl text-xs font-black uppercase tracking-widest text-white focus:outline-none focus:ring-4 focus:ring-primary-500/20 focus:border-primary-500 transition-all placeholder:text-slate-700 backdrop-blur-md"
-                  />
+
+            <div className="flex items-center gap-8 xl:pl-10 xl:border-l xl:border-white/5">
+               <div className="flex flex-col">
+                  <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Assets</span>
+                  <span className="text-xl font-black text-white font-mono">1.2k+</span>
+               </div>
+               <div className="flex flex-col">
+                  <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Sync</span>
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck size={14} className="text-emerald-500" />
+                    <span className="text-[10px] font-black text-white uppercase tracking-widest">NOMINAL</span>
+                  </div>
                </div>
             </div>
          </div>
       </div>
 
-      {/* 2. Intelligence Filter Bar */}
-      <div className="flex flex-col md:flex-row justify-between items-center gap-6 bg-white p-5 rounded-[28px] border border-slate-200 shadow-sm sticky top-4 z-20 backdrop-blur-md bg-white/90">
-         <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 no-scrollbar">
-            {categories.map((cat) => (
-               <button 
-                  key={cat} 
-                  onClick={() => setActiveCategory(cat)}
-                  className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all duration-300 ${activeCategory === cat ? 'bg-slate-950 text-white shadow-xl shadow-slate-900/20' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-50'}`}
-               >
-                  {cat}
-               </button>
-            ))}
-         </div>
-         <div className="flex items-center gap-3 shrink-0">
-            <button className="p-2.5 text-slate-400 hover:text-primary-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all">
-               <Filter size={18} />
-            </button>
+      {/* 2. Control Bar */}
+      <div className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm space-y-6 sticky top-4 z-30 backdrop-blur-md bg-white/90">
+         <div className="flex flex-col xl:flex-row justify-between items-center gap-6">
+            <div className="flex flex-wrap items-center gap-4 w-full xl:w-auto">
+               <div className="relative flex-1 md:w-80 group">
+                  <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-primary-500 pointer-events-none" />
+                  <input type="text" placeholder="模糊搜索名称、标签或架构..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-12 pr-4 py-3 text-[11px] font-black uppercase tracking-widest border border-slate-200 rounded-2xl bg-slate-50 focus:bg-white focus:outline-none focus:border-primary-500 transition-all shadow-inner" />
+               </div>
+               <div className="h-6 w-px bg-slate-100 hidden md:block"></div>
+               <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">任务类型:</span>
+                  <CustomSelect options={[{ value: '全部类型', label: '全部任务类型' }, { value: '图像分类', label: '图像分类' }, { value: '目标检测', label: '目标检测' }, { value: '文本生成', label: '文本生成' }]} value={taskFilter} onChange={setTaskFilter} className="w-48" />
+               </div>
+               <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">框架:</span>
+                  <CustomSelect options={[{ value: 'all', label: '全部框架' }, { value: 'PyTorch', label: 'PyTorch' }, { value: 'TensorFlow', label: 'TensorFlow' }]} value={frameworkFilter} onChange={setFrameworkFilter} className="w-36" />
+               </div>
+            </div>
          </div>
       </div>
 
       {/* 3. Model Matrix Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-         {filteredModels.map((model) => (
-            <div 
-              key={model.id} 
-              className="group bg-white border border-slate-200 rounded-[36px] p-0 hover:shadow-2xl hover:border-primary-500 transition-all duration-500 flex flex-col relative overflow-hidden"
-            >
-               <div className="absolute top-0 left-0 right-0 h-1 bg-slate-50 group-hover:bg-primary-500 transition-colors"></div>
-               
-               <div className="p-8 flex flex-col flex-1">
-                  {/* Header: Name & Task */}
-                  <div className="flex justify-between items-start mb-8">
-                     <div className="space-y-4">
-                        <div className="flex items-center gap-3">
-                           <div className={`px-2.5 py-1 rounded-lg border text-[9px] font-black uppercase tracking-widest ${getTaskColor(model.taskType)}`}>
-                              {model.taskType}
-                           </div>
-                           <Badge status="info" showDot={false}>{model.provider}</Badge>
-                        </div>
-                        <h3 className="text-2xl font-black text-slate-900 tracking-tighter leading-none group-hover:text-primary-600 transition-colors uppercase">{model.name}</h3>
-                     </div>
-                     <div className={`p-3 rounded-2xl border transition-all ${model.framework === 'PyTorch' ? 'bg-orange-50 border-orange-100 text-orange-600' : 'bg-blue-50 border-blue-100 text-blue-600'}`}>
-                        <Code size={20} strokeWidth={2.5} />
-                     </div>
-                  </div>
+         {filteredAndSortedModels.map((model) => {
+            const fwStyle = getFrameworkStyle(model.framework);
+            return (
+              <div 
+                key={model.id} 
+                onClick={() => handleOpenDetails(model)}
+                className="group bg-white border border-slate-200 rounded-[40px] p-0 hover:shadow-[0_20px_50px_-15px_rgba(0,0,0,0.08)] hover:border-primary-500 transition-all duration-500 flex flex-col relative overflow-hidden cursor-pointer h-full"
+              >
+                 {/* Visual Framework Ribbon - Replaced small icon with recognizable badge */}
+                 <div className="absolute top-6 right-6 z-10">
+                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border font-mono text-[9px] font-black uppercase tracking-widest transition-all duration-500 group-hover:scale-105 ${fwStyle.bg} ${fwStyle.glow}`}>
+                       <div className={`w-1.5 h-1.5 rounded-full ${fwStyle.accent} shadow-sm`}></div>
+                       {model.framework}
+                    </div>
+                 </div>
 
-                  {/* Body: Spec Matrix */}
-                  <div className="grid grid-cols-2 gap-3 mb-8">
-                     <div className="p-4 bg-slate-50/50 border border-slate-100 rounded-2xl space-y-1.5 hover:bg-white transition-all">
-                        <div className="flex items-center gap-2 text-[8px] font-black text-slate-400 uppercase tracking-widest">
-                           <Layers size={10} className="text-primary-500" /> 参数规模
-                        </div>
-                        <p className="text-[11px] font-black text-slate-800 font-mono">{model.params}</p>
-                     </div>
-                     <div className="p-4 bg-slate-50/50 border border-slate-100 rounded-2xl space-y-1.5 hover:bg-white transition-all">
-                        <div className="flex items-center gap-2 text-[8px] font-black text-slate-400 uppercase tracking-widest">
-                           <GitBranch size={10} className="text-primary-500" /> 镜像版本
-                        </div>
-                        <p className="text-[11px] font-black text-slate-800 font-mono">{model.latestVersion}</p>
-                     </div>
-                     <div className="p-4 bg-slate-50/50 border border-slate-100 rounded-2xl space-y-1.5 hover:bg-white transition-all">
-                        <div className="flex items-center gap-2 text-[8px] font-black text-slate-400 uppercase tracking-widest">
-                           <Database size={10} className="text-primary-500" /> 计算框架
-                        </div>
-                        <p className="text-[11px] font-black text-slate-800 font-mono">{model.framework}</p>
-                     </div>
-                     <div className="p-4 bg-slate-50/50 border border-slate-100 rounded-2xl space-y-1.5 hover:bg-white transition-all">
-                        <div className="flex items-center gap-2 text-[8px] font-black text-slate-400 uppercase tracking-widest">
-                           <Clock size={10} className="text-primary-500" /> 更新时间
-                        </div>
-                        <p className="text-[11px] font-black text-slate-800 font-mono tracking-tighter">{model.updatedAt}</p>
-                     </div>
-                  </div>
+                 <div className="p-8 flex flex-col flex-1">
+                    <div className="space-y-4 mb-8">
+                       <div className="flex items-center gap-2.5">
+                          <div className={`px-2.5 py-1 rounded-lg border text-[8px] font-black uppercase tracking-[0.15em] ${getTaskColor(model.taskType)}`}>
+                             {model.taskType}
+                          </div>
+                          <Badge status="info" showDot={false}>{model.provider.split(' ')[0]}</Badge>
+                       </div>
+                       <h3 className="text-2xl font-black text-slate-950 tracking-tighter leading-none group-hover:text-primary-600 transition-colors uppercase truncate max-w-[200px]" title={model.name}>
+                          {model.name}
+                       </h3>
+                       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none border-l-2 border-slate-100 pl-3 truncate">
+                          ID: {model.id}
+                       </p>
+                    </div>
 
-                  <p className="text-[11px] text-slate-500 leading-relaxed line-clamp-2 mb-8 h-8 font-medium">
-                     {model.description}
-                  </p>
+                    {/* Meta Spec Matrix - Removed Framework from grid as it's now a ribbon */}
+                    <div className="grid grid-cols-2 gap-px bg-slate-100 border border-slate-100 rounded-[24px] overflow-hidden mb-8 shadow-inner">
+                       <div className="p-4 bg-white space-y-1 hover:bg-slate-50/50 transition-colors">
+                          <div className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                             <Binary size={10} className="text-primary-500" /> 参数规模
+                          </div>
+                          <p className="text-[11px] font-black text-slate-800 font-mono uppercase">{model.params}</p>
+                       </div>
+                       <div className="p-4 bg-white space-y-1 hover:bg-slate-50/50 transition-colors">
+                          <div className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                             <GitBranch size={10} className="text-primary-500" /> 注册版本
+                          </div>
+                          <p className="text-[11px] font-black text-slate-800 font-mono uppercase">{model.latestVersion}</p>
+                       </div>
+                       <div className="p-4 bg-white space-y-1 hover:bg-slate-50/50 transition-colors">
+                          <div className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                             <Database size={10} className="text-primary-500" /> 文件大小
+                          </div>
+                          <p className="text-[11px] font-black text-slate-800 font-mono uppercase">{model.fileSize || 'N/A'}</p>
+                       </div>
+                       <div className="p-4 bg-white space-y-1 hover:bg-slate-50/50 transition-colors">
+                          <div className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                             <History size={10} className="text-primary-500" /> 最后更新
+                          </div>
+                          <p className="text-[11px] font-black text-slate-800 font-mono tracking-tighter uppercase">{model.updatedAt}</p>
+                       </div>
+                    </div>
 
-                  {/* Actions Matrix */}
-                  <div className="mt-auto pt-8 border-t border-slate-50 grid grid-cols-2 gap-4">
-                     <button 
-                        onClick={() => handleQuickTrial(model)}
-                        className="flex items-center justify-center gap-2 py-3 bg-white border border-slate-200 hover:border-slate-800 text-slate-700 hover:text-slate-900 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-sm"
-                     >
-                        <MonitorPlay size={14} strokeWidth={2.5} /> 快速试用
-                     </button>
-                     <button 
-                        onClick={() => handleDeploy(model)}
-                        className="flex items-center justify-center gap-2 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-primary-500/20 active:scale-95"
-                     >
-                        部署服务 <Rocket size={14} strokeWidth={2.5} />
-                     </button>
-                  </div>
-               </div>
-            </div>
-         ))}
+                    <div className="flex flex-wrap gap-1.5 mb-8 min-h-[48px] content-start">
+                       {model.tags.map((tag: string, i: number) => (
+                          <span key={i} className="px-2.5 py-1 bg-slate-50 text-slate-400 border border-slate-100 rounded-lg text-[8px] font-black uppercase tracking-[0.1em] group-hover:border-primary-100 group-hover:bg-primary-50/30 group-hover:text-primary-600 transition-all">
+                             #{tag}
+                          </span>
+                       ))}
+                    </div>
+
+                    <div className="mt-auto pt-6 border-t border-slate-50 grid grid-cols-2 gap-3" onClick={e => e.stopPropagation()}>
+                       <button onClick={() => navigate?.('inference', 'inference-playground', { service: { id: `PLAY-TEMP-${model.id}`, name: `${model.name} Sandbox`, modelName: model.name, modelVersion: model.latestVersion, status: 'running', endpoint: 'https://sandbox.api.ai-nex.io' } })} className="flex items-center justify-center gap-2 py-3 bg-white border border-slate-200 hover:border-slate-950 text-slate-600 hover:text-slate-950 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-sm">
+                          <MonitorPlay size={14} strokeWidth={2.5} /> 快速试用
+                       </button>
+                       <button onClick={() => navigate?.('inference', 'online-service', { sourceModel: model })} className="flex items-center justify-center gap-2 py-3 bg-slate-950 hover:bg-primary-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl active:scale-95">
+                          部署服务 <Rocket size={14} strokeWidth={2.5} />
+                       </button>
+                    </div>
+                 </div>
+              </div>
+            );
+         })}
       </div>
-
-      {/* 4. Empty State */}
-      {filteredModels.length === 0 && (
-        <div className="py-40 flex flex-col items-center justify-center text-slate-300 bg-white border border-slate-200 rounded-[48px] shadow-sm">
-           <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-10 border border-slate-100 relative">
-              <div className="absolute inset-0 bg-slate-200 rounded-full animate-pulse opacity-10"></div>
-              <Globe size={48} strokeWidth={1} className="opacity-20" />
-           </div>
-           <p className="text-[12px] font-black uppercase tracking-[0.5em] text-slate-400">Registry Result Empty</p>
-           <button 
-              onClick={() => { setSearchTerm(''); setActiveCategory('全部类型'); }}
-              className="mt-10 px-10 py-4 bg-slate-950 text-white text-[10px] font-black uppercase tracking-[0.3em] rounded-2xl hover:bg-primary-600 transition-all shadow-2xl active:scale-95"
-           >
-              Reset Search Parameters
-           </button>
-        </div>
-      )}
     </div>
   );
 };

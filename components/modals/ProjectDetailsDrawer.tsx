@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Drawer } from '../ui/Drawer';
 import { 
   FolderKanban, Users, Cpu, Zap, Database, 
@@ -15,10 +15,23 @@ interface ProjectDetailsDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   project: Project | null;
+  initialTab?: 'overview' | 'members' | 'quotas';
 }
 
-export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({ isOpen, onClose, project }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'quotas'>('overview');
+export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({ 
+  isOpen, 
+  onClose, 
+  project,
+  initialTab = 'overview'
+}) => {
+  const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'quotas'>(initialTab);
+
+  // 当抽屉打开或 initialTab 变化时，重置激活的标签
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab(initialTab);
+    }
+  }, [isOpen, initialTab]);
 
   if (!project) return null;
 

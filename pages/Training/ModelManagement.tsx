@@ -13,7 +13,6 @@ import {
   SortAsc, SortDesc, ArrowUpDown
 } from 'lucide-react';
 import { Badge } from '../../components/ui/Badge';
-import PageHeader from '../../components/layout/PageHeader';
 import { RegisterModelModal } from '../../components/modals/RegisterModelModal';
 import { ModelAssetDetailsDrawer } from '../../components/modals/ModelAssetDetailsDrawer';
 import { CustomSelect } from '../../components/ui/Select';
@@ -35,30 +34,19 @@ const ModelManagementPage: React.FC<ModelManagementProps> = ({ navigate }) => {
   const [detailsTab, setDetailsTab] = useState<'overview' | 'versions' | 'config' | 'audit'>('overview');
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
 
-  // 提取所有可用的框架选项
-  const frameworkOptions = useMemo(() => {
-    const frameworks = new Set<string>();
-    MOCK_USER_MODELS.forEach(m => {
-      const base = m.framework.split(' / ')[0];
-      frameworks.add(base);
-    });
-    return [
-      { value: 'all', label: '全部框架 (All Frameworks)' },
-      ...Array.from(frameworks).map(f => ({ value: f, label: f }))
-    ];
-  }, []);
-
-  // 提取所有可用的模型类型选项
-  const typeOptions = useMemo(() => {
-    const types = new Set<string>();
-    MOCK_USER_MODELS.forEach(m => {
-      types.add(m.type);
-    });
-    return [
-      { value: 'all', label: '全部类型 (All Types)' },
-      ...Array.from(types).map(t => ({ value: t, label: t }))
-    ];
-  }, []);
+  const getFrameworkBadge = (fw: string) => {
+    const name = fw.toLowerCase();
+    const style = name.includes('pytorch') 
+      ? 'bg-orange-50 border-orange-100 text-orange-600' 
+      : name.includes('tensorflow') 
+        ? 'bg-amber-50 border-amber-100 text-amber-600'
+        : 'bg-blue-50 border-blue-100 text-blue-600';
+    return (
+      <span className={`px-2 py-0.5 rounded-lg border font-mono text-[8px] font-black uppercase tracking-wider ${style}`}>
+        {fw.split(' / ')[0]}
+      </span>
+    );
+  };
 
   const filteredAndSortedModels = useMemo(() => {
     let result = MOCK_USER_MODELS.filter(model => {
@@ -72,7 +60,6 @@ const ModelManagementPage: React.FC<ModelManagementProps> = ({ navigate }) => {
       return matchesSearch && matchesFramework && matchesType;
     });
 
-    // 排序逻辑
     result.sort((a, b) => {
       let comparison = 0;
       if (sortField === 'updatedAt') {
@@ -107,21 +94,22 @@ const ModelManagementPage: React.FC<ModelManagementProps> = ({ navigate }) => {
     return (
       <div 
         onClick={() => handleOpenDetails('overview')}
-        className="group relative bg-white border border-slate-200 rounded-[32px] p-0 hover:shadow-2xl hover:border-primary-500 transition-all duration-500 cursor-pointer flex flex-col h-full overflow-hidden"
+        className="group relative bg-white border border-slate-200 rounded-[40px] p-0 hover:shadow-[0_20px_50px_-15px_rgba(0,0,0,0.08)] hover:border-primary-500 transition-all duration-500 cursor-pointer flex flex-col h-full overflow-hidden"
       >
-        <div className="absolute top-0 left-0 right-0 h-1 bg-slate-50 group-hover:bg-primary-500 transition-colors duration-500"></div>
-        
-        <div className="p-7 flex-1 flex flex-col">
+        <div className="p-8 flex-1 flex flex-col">
           <div className="flex justify-between items-start mb-10">
             <div className="flex items-center gap-4 min-w-0">
                <div className="w-14 h-14 rounded-2xl flex items-center justify-center border-2 transition-all duration-500 bg-slate-50 border-slate-100 text-slate-400 group-hover:border-primary-100 group-hover:bg-primary-50 group-hover:text-primary-600 shadow-sm shrink-0">
                   <Box size={28} strokeWidth={2.2} />
                </div>
                <div className="min-w-0">
-                  <h3 className="text-[17px] font-black text-slate-900 tracking-tight leading-none group-hover:text-primary-600 transition-colors uppercase truncate">
-                    {model.displayName}
-                  </h3>
-                  <div className="flex items-center gap-2 mt-2.5">
+                  <div className="flex items-center gap-2 mb-2">
+                     <h3 className="text-[17px] font-black text-slate-900 tracking-tight leading-none group-hover:text-primary-600 transition-colors uppercase truncate">
+                       {model.displayName}
+                     </h3>
+                     {getFrameworkBadge(model.framework)}
+                  </div>
+                  <div className="flex items-center gap-2">
                      <span className="text-[9px] font-mono font-black text-slate-400 uppercase tracking-tighter shrink-0">ID: {model.id.split('-').pop()}</span>
                      <div className="w-1 h-1 rounded-full bg-slate-200 shrink-0"></div>
                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest truncate">{model.name}</span>
@@ -136,85 +124,59 @@ const ModelManagementPage: React.FC<ModelManagementProps> = ({ navigate }) => {
                    {model.latestVersion.toUpperCase()}
                 </span>
                 <div className="flex items-center gap-1.5">
-                   <div className={`w-1.5 h-1.5 rounded-full ${model.status === 'stable' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]' : 'bg-amber-500 animate-pulse'}`}></div>
+                   <div className={`w-1.5 h-1.5 rounded-full ${model.status === 'stable' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]' : 'bg-amber-50 animate-pulse'}`}></div>
                    <span className={`text-[9px] font-black uppercase tracking-widest ${model.status === 'stable' ? 'text-emerald-600' : 'text-amber-600'}`}>
                       {model.status}
                    </span>
                 </div>
               </div>
-              <span className="text-[8px] font-black text-slate-300 uppercase tracking-[0.2em] pr-1">Registry Revision</span>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 mb-8">
-             <div className="p-4 bg-slate-50/50 border border-slate-100 rounded-2xl flex flex-col gap-1.5 hover:bg-white hover:border-primary-100 transition-all">
-                <div className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest">
-                   <Code size={10} className="text-primary-500" /> Framework
-                </div>
-                <p className="text-[11px] font-black text-slate-800 truncate uppercase leading-none">{model.framework.split(' / ')[0]}</p>
-             </div>
-             <div className="p-4 bg-slate-50/50 border border-slate-100 rounded-2xl flex flex-col gap-1.5 hover:bg-white hover:border-primary-100 transition-all">
+          <div className="grid grid-cols-2 gap-px bg-slate-100 border border-slate-100 rounded-[24px] overflow-hidden mb-8 shadow-inner">
+             <div className="p-4 bg-white space-y-1 hover:bg-slate-50/50 transition-colors">
                 <div className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest">
                    <Fingerprint size={10} className="text-primary-500" /> Architecture
                 </div>
                 <p className="text-[11px] font-black text-slate-800 font-mono tracking-tighter uppercase leading-none">{model.type}</p>
              </div>
-             <div className="p-4 bg-slate-50/50 border border-slate-100 rounded-2xl flex flex-col gap-1.5 hover:bg-white hover:border-primary-100 transition-all">
+             <div className="p-4 bg-white space-y-1 hover:bg-slate-50/50 transition-colors">
                 <div className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest">
                    <DownloadCloud size={10} className="text-primary-500" /> Downloads
                 </div>
+                {/* Complete the truncated component logic */}
                 <p className="text-[11px] font-black text-slate-800 font-mono tracking-tighter leading-none">
-                  {totalDownloads >= 1000 ? `${(totalDownloads/1000).toFixed(1)}k` : totalDownloads} UNITS
+                  {totalDownloads} UNITS
                 </p>
-             </div>
-             <div className="p-4 bg-slate-50/50 border border-slate-100 rounded-2xl flex flex-col gap-1.5 hover:bg-white hover:border-primary-100 transition-all">
-                <div className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest">
-                   <Database size={10} className="text-primary-500" /> Storage
-                </div>
-                <p className="text-[11px] font-black text-slate-800 font-mono tracking-tighter leading-none">{model.size}</p>
              </div>
           </div>
 
-          <div className="mt-auto pt-6 border-t border-slate-100">
-             <div className="flex items-center justify-between mb-6 px-1">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-500 shadow-inner group-hover:border-primary-100 transition-all">
-                    {model.owner[0].toUpperCase()}
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-bold text-slate-800 leading-none">{model.owner}</span>
-                    <span className="text-[8px] text-slate-400 font-black uppercase mt-1">Audit Provider</span>
-                  </div>
-                </div>
-                <div className="flex flex-col items-end">
-                   <div className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">
-                      <History size={10} className="text-slate-300" /> Latency Check
-                   </div>
-                   <p className="text-[10px] font-black text-slate-500 font-mono leading-none tracking-tighter mt-1">
-                      {model.updatedAt}
-                   </p>
-                </div>
+          <div className="mt-auto space-y-5">
+             <div className="flex flex-wrap gap-2 min-h-[48px] content-start">
+               <Badge status="primary" showDot={false}>{model.type}</Badge>
+               <Badge status="info" showDot={false}>{model.owner}</Badge>
+               <span className="px-2 py-0.5 rounded-lg bg-slate-50 border border-slate-100 text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <Database size={10} /> {model.size}
+               </span>
              </div>
 
-             <div className="grid grid-cols-3 gap-2" onClick={e => e.stopPropagation()}>
-                <button 
-                  onClick={() => handleOpenDetails('versions')}
-                  className="py-3 bg-white border border-slate-200 text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 hover:border-slate-400 transition-all flex items-center justify-center gap-2 active:scale-95 shadow-sm"
-                >
-                   <GitBranch size={13} strokeWidth={2.5} /> 版本
-                </button>
-                <button 
-                  onClick={handleIDEDebug}
-                  className="py-3 bg-white border border-slate-200 text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 hover:border-slate-400 transition-all flex items-center justify-center gap-2 active:scale-95 shadow-sm"
-                >
-                   <Terminal size={13} strokeWidth={2.5} /> 调试
-                </button>
-                <button 
-                  onClick={() => handleOpenDetails('overview')}
-                  className="py-3 bg-primary-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-700 transition-all flex items-center justify-center gap-2 active:scale-95 shadow-lg shadow-primary-500/20"
-                >
-                   <Rocket size={13} strokeWidth={2.5} /> 部署
-                </button>
+             <div className="pt-6 border-t border-slate-50 flex items-center justify-between">
+                <div className="flex flex-col">
+                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Last Synced</span>
+                   <span className="text-[10px] font-black text-slate-700 font-mono uppercase tracking-tighter">{model.updatedAt}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                   <button 
+                      onClick={handleIDEDebug}
+                      className="p-2.5 bg-slate-50 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all border border-transparent hover:border-primary-100"
+                      title="Open in IDE"
+                   >
+                      <Terminal size={18} strokeWidth={2.5} />
+                   </button>
+                   <div className="p-2.5 rounded-xl bg-slate-50 text-slate-300 group-hover:text-primary-600 group-hover:bg-primary-50 transition-all duration-300">
+                      <ChevronRight size={20} strokeWidth={3} />
+                   </div>
+                </div>
              </div>
           </div>
         </div>
@@ -223,135 +185,91 @@ const ModelManagementPage: React.FC<ModelManagementProps> = ({ navigate }) => {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700 font-sans pb-24">
+    <div className="space-y-8 animate-in fade-in duration-700 pb-20 font-sans">
       <RegisterModelModal isOpen={isRegisterModalOpen} onClose={() => setIsRegisterModalOpen(false)} />
       <ModelAssetDetailsDrawer 
         isOpen={isDetailsOpen} 
         onClose={() => setIsDetailsOpen(false)} 
-        model={selectedModel}
-        initialTab={detailsTab}
+        model={selectedModel} 
+        initialTab={detailsTab} 
       />
 
-      <PageHeader 
-        icon={Box}
-        title="模型资产管理"
-        subtitle="ENTERPRISE AI REGISTRY & AUDIT CONSOLE"
-        badgeText="ASSET INTEGRITY READY"
-        actions={
-          <button 
-            onClick={() => setIsRegisterModalOpen(true)}
-            className="flex items-center gap-2.5 px-7 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-all font-black text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-primary-500/20 active:scale-95"
-          >
-            <Plus size={18} strokeWidth={3} />
-            <span>注册新资产</span>
-          </button>
-        }
-      />
-
-      {/* 增强型工具栏：新增框架、类型筛选与排序功能 */}
-      <div className="bg-white p-5 rounded-[28px] border border-slate-200 shadow-sm flex flex-col gap-4">
-         <div className="flex flex-col xl:flex-row justify-between items-center gap-5">
-            <div className="flex items-center gap-4 w-full xl:w-auto overflow-x-auto no-scrollbar pb-2 xl:pb-0">
-               <div className="relative flex-1 xl:w-72 shrink-0 group">
-                  <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-primary-500 pointer-events-none" />
-                  <input 
-                     type="text" 
-                     placeholder="搜索资产名称 / ID / 架构..." 
-                     value={searchTerm} 
-                     onChange={(e) => setSearchTerm(e.target.value)} 
-                     className="w-full pl-11 pr-4 py-2.5 text-[10px] font-black uppercase tracking-widest border border-slate-200 rounded-2xl bg-slate-50 focus:bg-white focus:border-primary-500 transition-all placeholder:text-slate-300" 
-                  />
-               </div>
-               
-               <div className="h-6 w-px bg-slate-100 hidden sm:block shrink-0"></div>
-               
-               {/* 模型框架筛选器 */}
-               <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest hidden sm:block">框架:</span>
-                  <CustomSelect
-                    options={frameworkOptions}
-                    value={frameworkFilter}
-                    onChange={setFrameworkFilter}
-                    className="w-40"
-                  />
-               </div>
-
-               {/* 模型类型筛选器 */}
-               <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest hidden sm:block">类型:</span>
-                  <CustomSelect
-                    options={typeOptions}
-                    value={typeFilter}
-                    onChange={setTypeFilter}
-                    className="w-40"
-                  />
-               </div>
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 bg-white border border-slate-200 p-8 rounded-4xl shadow-sm relative overflow-hidden group">
+        <div className="absolute top-0 right-0 p-12 opacity-[0.02] pointer-events-none group-hover:opacity-[0.05] transition-opacity duration-700">
+           <Box size={160} strokeWidth={1} />
+        </div>
+        <div className="flex items-center gap-6 relative z-10">
+          <div className="w-16 h-16 bg-slate-950 rounded-2xl flex items-center justify-center text-white shadow-2xl">
+            <Box size={32} strokeWidth={2.5} />
+          </div>
+          <div>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase leading-none">模型资产治理中心</h1>
+            <div className="flex items-center gap-4 mt-3.5">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] flex items-center gap-2">
+                <ShieldCheck size={14} className="text-emerald-500" /> ASSET INTEGRITY NOMINAL
+              </span>
+              <div className="w-1.5 h-1.5 rounded-full bg-slate-200"></div>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest italic font-mono">ENTERPRISE MODEL REGISTRY</p>
             </div>
+          </div>
+        </div>
+        <button 
+          onClick={() => setIsRegisterModalOpen(true)}
+          className="flex items-center gap-2.5 px-8 py-4 bg-primary-600 text-white rounded-2xl hover:bg-primary-700 transition-all font-black text-[11px] uppercase tracking-[0.2em] shadow-2xl shadow-primary-500/30 active:scale-95 group/btn"
+        >
+          <Plus size={18} strokeWidth={3} className="group-hover/btn:rotate-90 transition-transform" />
+          <span>注册新模型资产</span>
+        </button>
+      </div>
 
-            <div className="flex items-center gap-4 w-full xl:w-auto justify-end shrink-0">
-               {/* 排序功能 */}
-               <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest hidden sm:block">排序:</span>
-                  <CustomSelect
-                    options={[
-                      { value: 'updatedAt', label: '最近更新时间' },
-                      { value: 'displayName', label: '资产显示名称' }
-                    ]}
-                    value={sortField}
-                    onChange={(val) => setSortField(val as any)}
-                    className="w-40"
-                  />
-                  <button 
-                    onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
-                    className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 hover:text-primary-600 transition-all shadow-sm"
-                    title={sortDirection === 'asc' ? '升序' : '降序'}
-                  >
-                    {sortDirection === 'asc' ? <SortAsc size={16} /> : <SortDesc size={16} />}
-                  </button>
-               </div>
-
-               <div className="h-6 w-px bg-slate-100 hidden sm:block"></div>
-
-               <button className="flex items-center gap-2 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-primary-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all shadow-sm">
-                  <Filter size={16} /> 更多
-               </button>
+      <div className="flex flex-col xl:flex-row justify-between items-center gap-5 bg-white p-4 rounded-[28px] border border-slate-200 shadow-sm">
+         <div className="flex items-center gap-4 w-full xl:w-auto">
+            <div className="relative flex-1 xl:w-80 group">
+               <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-primary-500 transition-colors pointer-events-none" />
+               <input 
+                 type="text" 
+                 placeholder="ID / MODEL SEARCH..." 
+                 value={searchTerm}
+                 onChange={(e) => setSearchTerm(e.target.value)}
+                 className="w-full pl-12 pr-4 py-2.5 text-[10px] font-black uppercase tracking-[0.2em] border border-slate-200 rounded-2xl bg-slate-50 focus:bg-white focus:outline-none focus:border-primary-500 transition-all"
+               />
             </div>
-         </div>
-         
-         <div className="flex items-center justify-between px-1">
-            <div className="flex items-center gap-5">
-               <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Certified: {MOCK_USER_MODELS.filter(m=>m.status==='stable').length}</span>
-               </div>
-               <div className="w-px h-3 bg-slate-200"></div>
-               <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
-                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Staging: {MOCK_USER_MODELS.filter(m=>m.status!=='stable').length}</span>
-               </div>
+            
+            <div className="h-6 w-px bg-slate-200 hidden sm:block"></div>
+
+            <div className="flex flex-wrap items-center gap-3">
+               <CustomSelect
+                 options={[
+                   { value: 'all', label: 'All Frameworks' },
+                   { value: 'PyTorch', label: 'PyTorch' },
+                   { value: 'TensorFlow', label: 'TensorFlow' }
+                 ]}
+                 value={frameworkFilter}
+                 onChange={setFrameworkFilter}
+                 className="w-44"
+               />
+               <CustomSelect
+                 options={[
+                   { value: 'all', label: 'All Modalities' },
+                   { value: 'NLP', label: 'NLP' },
+                   { value: 'CV', label: 'CV' }
+                 ]}
+                 value={typeFilter}
+                 onChange={setTypeFilter}
+                 className="w-40"
+               />
             </div>
-            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">展示 {filteredAndSortedModels.length} 个符合条件的模型资产</span>
          </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-         {filteredAndSortedModels.map((model) => (
-            <ModelCard key={model.id} model={model} />
-         ))}
-
-         <div 
-            onClick={() => setIsRegisterModalOpen(true)}
-            className="border-2 border-dashed border-slate-200 rounded-[32px] p-8 flex flex-col items-center justify-center text-center group hover:border-primary-200 hover:bg-primary-50/5 transition-all cursor-pointer min-h-[440px]"
-         >
-            <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-200 group-hover:bg-white group-hover:text-primary-600 group-hover:shadow-lg group-hover:scale-110 transition-all duration-500 mb-6">
-               <Plus size={32} strokeWidth={2.5} />
-            </div>
-            <h4 className="text-sm font-black text-slate-900 uppercase tracking-[0.2em] mb-2">Register Asset</h4>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest max-w-[220px] leading-relaxed">建立企业级权重文件与元数据的合规映射，锁定资产谱系</p>
-         </div>
+        {filteredAndSortedModels.map(model => (
+          <ModelCard key={model.id} model={model} />
+        ))}
       </div>
     </div>
   );
 };
 
+// Fix: Add missing default export
 export default ModelManagementPage;

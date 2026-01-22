@@ -8,15 +8,17 @@ import TasksPage from './pages/Compute/Tasks';
 import MonitoringPage from './pages/Compute/Monitoring';
 import ProjectsPage from './pages/Compute/Projects';
 import TenantsPage from './pages/Compute/Tenants';
+import UsersPage from './pages/Compute/Users';
+import RolesPage from './pages/Compute/Roles'; // 新增
 import ModelManagementPage from './pages/Training/ModelManagement';
 import ModelHubPage from './pages/Training/ModelHub';
 import IDEEnvironmentPage from './pages/Training/IDEEnvironment';
 import OnlineServicesPage from './pages/Inference/OnlineServices';
 import ServiceMonitoringPage from './pages/Inference/ServiceMonitoring';
-import InferencePlaygroundPage from './pages/Inference/InferencePlayground'; // 新增
+import InferencePlaygroundPage from './pages/Inference/InferencePlayground'; 
 import { ModuleType } from './types';
 import { SIDEBAR_ITEMS } from './constants';
-import { ChevronRight, ExternalLink, ShieldCheck, Activity, Rocket } from 'lucide-react';
+import { ChevronRight, ExternalLink, ShieldCheck, Activity, Rocket, ShieldAlert } from 'lucide-react';
 
 const App: React.FC = () => {
   const [activeModule, setActiveModule] = useState<ModuleType>('compute');
@@ -130,6 +132,8 @@ const App: React.FC = () => {
       if (activePage === 'monitoring') return <MonitoringPage />;
       if (activePage === 'projects') return <ProjectsPage />;
       if (activePage === 'tenants') return <TenantsPage />;
+      if (activePage === 'users') return <UsersPage />;
+      if (activePage === 'roles') return <RolesPage />; // 新增
     }
 
     if (activeModule === 'training') {

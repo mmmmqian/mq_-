@@ -1,66 +1,64 @@
 
 import React, { useState, useMemo } from 'react';
 import { 
-  FolderKanban, Plus, Search, Filter, 
+  FolderKanban, Plus, Search, RefreshCw, 
   ChevronRight, MoreHorizontal, Settings,
   Users, Cpu, Zap, Database, BarChart3,
-  RefreshCw, LayoutGrid, List, Clock,
+  LayoutGrid, List, Clock,
   ShieldCheck, ArrowUpRight, SearchIcon,
   FilterIcon, Power, ShieldAlert, Edit, Trash2,
-  ExternalLink, UserCircle, Globe
+  ExternalLink, UserCircle, Globe, Info, AlertTriangle,
+  Layers
 } from 'lucide-react';
 import { Badge } from '../../components/ui/Badge';
-import StatCard from '../../components/ui/StatCard';
 import PageHeader from '../../components/layout/PageHeader';
 import { CustomSelect } from '../../components/ui/Select';
 import { ProjectDetailsDrawer } from '../../components/modals/ProjectDetailsDrawer';
 import { CreateProjectModal } from '../../components/modals/CreateProjectModal';
+import { ToggleProjectStatusModal } from '../../components/modals/ToggleProjectStatusModal';
 import { MOCK_PROJECTS, MOCK_TENANTS } from '../../constants';
 import { Project } from '../../types';
 
 const ProjectsPage: React.FC = () => {
+  const [projects, setProjects] = useState<Project[]>(MOCK_PROJECTS);
   const [searchTerm, setSearchTerm] = useState('');
   const [tenantFilter, setTenantFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+  
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [detailTab, setDetailTab] = useState<'overview' | 'members' | 'quotas'>('overview');
 
-  // 过滤逻辑
   const filteredProjects = useMemo(() => {
-    return MOCK_PROJECTS.filter(p => {
+    return projects.filter(p => {
       const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                            p.id.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesTenant = tenantFilter === 'all' || p.tenantId === tenantFilter;
       const matchesStatus = statusFilter === 'all' || p.status === statusFilter;
       return matchesSearch && matchesTenant && matchesStatus;
     });
-  }, [searchTerm, tenantFilter, statusFilter]);
+  }, [projects, searchTerm, tenantFilter, statusFilter]);
 
-  // 数据统计
-  const stats = useMemo(() => ({
-    total: MOCK_PROJECTS.length,
-    active: MOCK_PROJECTS.filter(p => p.status === 'active').length,
-    totalGpu: MOCK_PROJECTS.reduce((acc, p) => acc + p.quota.gpu, 0),
-    totalMembers: MOCK_PROJECTS.reduce((acc, p) => acc + p.memberCount, 0)
-  }), []);
-
-  const handleRowClick = (project: Project) => {
+  const handleOpenDetails = (project: Project, tab: typeof detailTab = 'overview') => {
     setSelectedProject(project);
+    setDetailTab(tab);
     setIsDetailsOpen(true);
   };
 
-  const ResourceMiniGauge = ({ label, used, total, unit, color }: any) => {
-    const percent = Math.round((used / total) * 100);
-    const isCritical = percent > 85;
+  const ResourceMiniGauge = ({ label, used, total, color }: any) => {
+    const percent = total > 0 ? Math.round((used / total) * 100) : 0;
     return (
       <div className="flex flex-col gap-1 w-24">
          <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-tighter">
             <span className="text-slate-400">{label}</span>
-            <span className={isCritical ? 'text-red-500' : 'text-slate-600'}>{percent}%</span>
+            <span className="text-slate-600 font-mono">{percent}%</span>
          </div>
          <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
-            <div className={`h-full ${isCritical ? 'bg-red-500 animate-pulse' : color} transition-all duration-1000`} style={{ width: `${percent}%` }}></div>
+            <div className={`h-full ${color} transition-all duration-1000`} style={{ width: `${percent}%` }}></div>
          </div>
       </div>
     );
@@ -68,8 +66,9 @@ const ProjectsPage: React.FC = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700 pb-20 font-sans">
-      <ProjectDetailsDrawer isOpen={isDetailsOpen} onClose={() => setIsDetailsOpen(false)} project={selectedProject} />
-      <CreateProjectModal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} isAdmin={true} />
+      <ProjectDetailsDrawer isOpen={isDetailsOpen} onClose={() => setIsDetailsOpen(false)} project={selectedProject} initialTab={detailTab} />
+      <CreateProjectModal isOpen={isCreateOpen} onClose={() => { setIsCreateOpen(false); setSelectedProject(null); }} initialData={selectedProject} />
+      <ToggleProjectStatusModal isOpen={isStatusModalOpen} onClose={() => setIsStatusModalOpen(false)} project={selectedProject} onConfirm={() => setIsStatusModalOpen(false)} />
 
       <PageHeader 
         icon={FolderKanban}
@@ -78,7 +77,7 @@ const ProjectsPage: React.FC = () => {
         badgeText="ORGANIZATION LEVEL ACCESS"
         actions={
           <button 
-            onClick={() => setIsCreateOpen(true)}
+            onClick={() => { setSelectedProject(null); setIsCreateOpen(true); }}
             className="flex items-center gap-2.5 px-8 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-all font-black text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-primary-500/20 active:scale-95"
           >
             <Plus size={16} strokeWidth={3} />
@@ -87,15 +86,6 @@ const ProjectsPage: React.FC = () => {
         }
       />
 
-      {/* KPI Stats Panel */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="项目实例总数" value={stats.total} icon={FolderKanban} subtext="System Registry" />
-        <StatCard title="CPU 总配额" value="350C" icon={Cpu} variant="primary" subtext="Allocated Cores" />
-        <StatCard title="GPU 总配额" value={`${stats.totalGpu}U`} icon={Zap} subtext="Accelerator Cards" />
-        <StatCard title="活跃成员" value={stats.totalMembers} icon={Users} subtext="Team Engagement" />
-      </div>
-
-      {/* Advanced Control Bar */}
       <div className="flex flex-col xl:flex-row justify-between items-center gap-5 bg-white p-4 rounded-[28px] border border-slate-200 shadow-sm">
          <div className="flex items-center gap-4 w-full xl:w-auto">
             <div className="relative flex-1 xl:w-80 group">
@@ -108,119 +98,85 @@ const ProjectsPage: React.FC = () => {
                  className="w-full pl-12 pr-4 py-2.5 text-[10px] font-black uppercase tracking-[0.2em] border border-slate-200 rounded-2xl bg-slate-50 focus:bg-white focus:outline-none focus:border-primary-500 transition-all"
                />
             </div>
-            
             <div className="h-6 w-px bg-slate-200 hidden sm:block"></div>
-
-            <div className="flex flex-wrap items-center gap-3">
-               <CustomSelect
-                 options={[
-                   { value: 'all', label: 'All Tenants' },
-                   ...MOCK_TENANTS.map(t => ({ value: t.id, label: t.name }))
-                 ]}
-                 value={tenantFilter}
-                 onChange={setTenantFilter}
-                 className="w-44"
-               />
-               <CustomSelect
-                 options={[
-                   { value: 'all', label: 'All Status' },
-                   { value: 'active', label: '启用中' },
-                   { value: 'frozen', label: '已冻结' }
-                 ]}
-                 value={statusFilter}
-                 onChange={setStatusFilter}
-                 className="w-36"
-               />
-            </div>
+            <CustomSelect
+              options={[{ value: 'all', label: '所有组织' }, ...MOCK_TENANTS.map(t => ({ value: t.id, label: t.name }))]}
+              value={tenantFilter}
+              onChange={setTenantFilter}
+              className="w-48"
+            />
          </div>
          <button className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-400 hover:text-primary-600 transition-all">
             <RefreshCw size={18} />
          </button>
       </div>
 
-      {/* Projects Registry Table */}
       <div className="bg-white border border-slate-200 rounded-[36px] shadow-soft overflow-hidden">
-         <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-               <thead>
-                  <tr className="bg-slate-50/50 text-slate-400 border-b border-slate-200 whitespace-nowrap">
-                     <th className="pl-10 pr-6 py-6 text-[10px] font-black uppercase tracking-[0.3em]">项目核心标识 (IDENTITY)</th>
-                     <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[0.3em]">组织归属</th>
-                     <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[0.3em]">负责人 (OWNER)</th>
-                     <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[0.3em]">资源配额水位</th>
-                     <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[0.3em] text-center">团队规模</th>
-                     <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[0.3em]">运行状态</th>
-                     <th className="px-10 py-6 text-[10px] font-black uppercase tracking-[0.3em] text-right">操作</th>
+        <div className="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/40">
+           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2">
+             <BarChart3 size={16} /> PROJECT RESOURCE MATRIX
+           </h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50/30 text-slate-400 border-b border-slate-200 whitespace-nowrap">
+                <th className="px-10 py-4 text-[10px] font-black uppercase tracking-[0.2em]">项目核心标识</th>
+                <th className="px-8 py-4 text-[10px] font-black uppercase tracking-[0.2em]">归属租户</th>
+                <th className="px-8 py-4 text-[10px] font-black uppercase tracking-[0.2em]">负责人</th>
+                <th className="px-8 py-4 text-[10px] font-black uppercase tracking-[0.2em]">配额利用率 (G/C/S)</th>
+                <th className="px-8 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-center">状态</th>
+                <th className="px-8 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-right">操作</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredProjects.map(project => {
+                const isActive = project.status === 'active';
+                return (
+                  <tr key={project.id} onClick={() => handleOpenDetails(project)} className="group hover:bg-slate-50/80 transition-all cursor-pointer">
+                    <td className="px-10 py-6">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-white shadow-lg transition-all duration-500 ${isActive ? 'bg-slate-950 group-hover:bg-primary-600' : 'bg-slate-300'}`}>
+                          <FolderKanban size={20} strokeWidth={2.5} />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-black text-slate-900 text-sm uppercase group-hover:text-primary-600 transition-colors">{project.name}</span>
+                          <span className="font-mono text-[9px] font-bold text-slate-400 uppercase tracking-tighter mt-1">{project.id}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-8 py-6">
+                       <span className="text-[11px] font-black text-slate-700 tracking-tight uppercase flex items-center gap-1.5"><Globe size={12} className="text-slate-300" /> {project.tenantName}</span>
+                    </td>
+                    <td className="px-8 py-6">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-500 uppercase">{project.owner[0]}</div>
+                        <span className="text-[11px] font-bold text-slate-800 font-mono">{project.owner}</span>
+                      </div>
+                    </td>
+                    <td className="px-8 py-6">
+                      <div className="flex gap-4">
+                        <ResourceMiniGauge label="GPU" used={project.quota.gpuUsed} total={project.quota.gpu} color="bg-emerald-500" />
+                        <ResourceMiniGauge label="CPU" used={project.quota.cpuUsed} total={project.quota.cpu} color="bg-primary-500" />
+                        <ResourceMiniGauge label="STR" used={project.quota.storageUsed} total={project.quota.storage} color="bg-amber-500" />
+                      </div>
+                    </td>
+                    <td className="px-8 py-6 text-center">
+                       <Badge status={isActive ? 'success' : 'neutral'} showDot>{isActive ? '活跃' : '冻结'}</Badge>
+                    </td>
+                    <td className="px-8 py-6 text-right">
+                      <div className="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-all duration-300">
+                        <button onClick={(e) => { e.stopPropagation(); handleOpenDetails(project); }} className="p-2.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all" title="详情"><Info size={18} strokeWidth={2.5} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); setSelectedProject(project); setIsCreateOpen(true); }} className="p-2.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all" title="编辑"><Settings size={18} strokeWidth={2.5} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); setSelectedProject(project); setIsDeleteConfirmOpen(true); }} className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all" title="删除"><Trash2 size={18} strokeWidth={2.5} /></button>
+                      </div>
+                    </td>
                   </tr>
-               </thead>
-               <tbody className="divide-y divide-slate-100">
-                  {filteredProjects.map(project => (
-                     <tr 
-                        key={project.id} 
-                        onClick={() => handleRowClick(project)}
-                        className="group hover:bg-slate-50/80 transition-all cursor-pointer"
-                     >
-                        <td className="pl-10 pr-6 py-7">
-                           <div className="flex items-center gap-4">
-                              <div className="w-11 h-11 bg-slate-950 rounded-2xl flex items-center justify-center text-white group-hover:bg-primary-600 group-hover:shadow-lg group-hover:shadow-primary-500/30 transition-all duration-500">
-                                 <FolderKanban size={20} strokeWidth={2.5} />
-                              </div>
-                              <div className="flex flex-col">
-                                 <span className="font-black text-slate-900 tracking-tight text-sm uppercase group-hover:text-primary-600 transition-colors">{project.name}</span>
-                                 <span className="font-mono text-[9px] font-bold text-slate-400 mt-1 tracking-tighter uppercase">{project.id}</span>
-                              </div>
-                           </div>
-                        </td>
-                        <td className="px-6 py-7">
-                           <div className="flex flex-col gap-1">
-                              <span className="text-[11px] font-black text-slate-700 tracking-tight uppercase flex items-center gap-1.5"><Globe size={12} className="text-slate-300" /> {project.tenantName}</span>
-                              <span className="text-[9px] font-mono font-bold text-slate-400 uppercase tracking-tighter">ID: {project.tenantId}</span>
-                           </div>
-                        </td>
-                        <td className="px-6 py-7">
-                           <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500 border border-slate-200 uppercase">{project.owner[0]}</div>
-                              <span className="text-[11px] font-bold text-slate-800 font-mono">{project.owner}</span>
-                           </div>
-                        </td>
-                        <td className="px-6 py-7">
-                           <div className="flex gap-4">
-                              <ResourceMiniGauge label="CPU" used={project.quota.cpuUsed} total={project.quota.cpu} unit="C" color="bg-primary-500" />
-                              <ResourceMiniGauge label="GPU" used={project.quota.gpuUsed} total={project.quota.gpu} unit="U" color="bg-emerald-500" />
-                              <ResourceMiniGauge label="STR" used={project.quota.storageUsed} total={project.quota.storage} unit="G" color="bg-amber-500" />
-                           </div>
-                        </td>
-                        <td className="px-6 py-7 text-center">
-                           <div className="inline-flex items-center gap-2.5 px-3 py-1 bg-slate-50 border border-slate-200 rounded-xl">
-                              <Users size={12} className="text-slate-400" />
-                              <span className="text-[11px] font-black text-slate-900 font-mono tracking-tighter">{project.memberCount}</span>
-                           </div>
-                        </td>
-                        <td className="px-6 py-7">
-                           <Badge status={project.status === 'active' ? 'success' : 'neutral'}>
-                              {project.status === 'active' ? '运行中' : '已冻结'}
-                           </Badge>
-                        </td>
-                        <td className="px-10 py-7 text-right">
-                           <div className="flex justify-end gap-1 opacity-20 group-hover:opacity-100 transition-opacity">
-                              <button className="p-2.5 text-slate-400 hover:text-primary-600 hover:bg-white rounded-xl border border-transparent hover:border-slate-200 transition-all" title="成员管理"><Users size={16} /></button>
-                              <button className="p-2.5 text-slate-400 hover:text-primary-600 hover:bg-white rounded-xl border border-transparent hover:border-slate-200 transition-all" title="编辑项目"><Edit size={16} /></button>
-                              <button className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-white rounded-xl border border-transparent hover:border-red-100 transition-all" title="冻结项目"><Power size={16} /></button>
-                           </div>
-                        </td>
-                     </tr>
-                  ))}
-               </tbody>
-            </table>
-         </div>
-         {filteredProjects.length === 0 && (
-            <div className="py-32 flex flex-col items-center justify-center text-center">
-               <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-200 mb-6 border border-slate-100">
-                  <SearchIcon size={32} />
-               </div>
-               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No Projects Found In Registry</p>
-            </div>
-         )}
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

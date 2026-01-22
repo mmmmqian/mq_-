@@ -61,6 +61,7 @@ export interface Project {
 export interface Tenant {
   id: string;
   name: string;
+  admin: string; // 租户管理员
   status: 'active' | 'disabled';
   quota: ProjectQuota;
   projectCount: number;
@@ -68,6 +69,41 @@ export interface Tenant {
   userCount: number;
   createdAt: string;
   description?: string;
+}
+
+export type PlatformRole = 'super_admin' | 'platform_admin' | 'operations_engineer' | 'platform_visitor';
+
+export interface User {
+  id: string;
+  userName: string;
+  realName: string;
+  email: string;
+  phone: string;
+  tenantId: string;
+  tenantName: string;
+  role: PlatformRole;
+  status: 'active' | 'disabled';
+  createdAt: string;
+  lastLoginAt: string;
+  remark?: string;
+}
+
+export interface PermissionNode {
+  id: string;
+  label: string;
+  description?: string;
+  children?: PermissionNode[];
+}
+
+export interface Role {
+  id: string;
+  name: string;
+  code: string;
+  type: 'platform' | 'project';
+  isBuiltIn: boolean;
+  description: string;
+  permissions: PermissionNode[];
+  userCount: number;
 }
 
 export type ModuleType = 'compute' | 'data' | 'training' | 'inference' | 'agents' | 'knowledge';
